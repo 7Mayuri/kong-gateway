@@ -39,15 +39,16 @@ pipeline {
             }
         }
 
+        // Jenkins reaches these as sibling containers on kong-net, not via localhost.
         stage('Wait for Services') {
             steps {
                 sh '''
                     for i in $(seq 1 30); do
-                        curl -sf http://localhost:5000/health > /dev/null 2>&1 && break
+                        curl -sf http://backend:5000/health > /dev/null 2>&1 && break
                         sleep 1
                     done
                     for i in $(seq 1 30); do
-                        curl -sf http://localhost:8001/status > /dev/null 2>&1 && break
+                        curl -sf http://kong:8001/status > /dev/null 2>&1 && break
                         sleep 1
                     done
                     sleep 3
@@ -58,14 +59,14 @@ pipeline {
         // x-environment-validator sits on /api/hello, not /api/ping.
         stage('Test: Valid Request') {
             steps {
-                sh 'curl -i -H "x-environment: DEV" http://localhost:8000/api/hello'
+                sh 'curl -i -H "x-environment: DEV" http://kong:8000/api/hello'
             }
         }
 
         stage('Test: Missing Header') {
             steps {
                 sh '''
-                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/hello)
+                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://kong:8000/api/hello)
                     [ "$STATUS" = "400" ] || { echo "Expected 400, got $STATUS"; exit 1; }
                 '''
             }
@@ -74,7 +75,7 @@ pipeline {
         stage('Test: Invalid Header') {
             steps {
                 sh '''
-                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "x-environment: INVALID" http://localhost:8000/api/hello)
+                    STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "x-environment: INVALID" http://kong:8000/api/hello)
                     [ "$STATUS" = "403" ] || { echo "Expected 403, got $STATUS"; exit 1; }
                 '''
             }
@@ -85,7 +86,7 @@ pipeline {
                 dir('/workspace') {
                     sh '''
                         docker compose -p kong-poc ps backend kong
-                        curl -s http://localhost:8001/services
+                        curl -s http://kong:8001/services
                     '''
                 }
             }
