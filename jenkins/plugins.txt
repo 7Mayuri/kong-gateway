@@ -3,3 +3,4 @@ workflow-aggregator:latest
 docker-workflow:latest
 configuration-as-code:latest
 job-dsl:latest
+timestamper:latest

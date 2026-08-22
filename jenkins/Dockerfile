@@ -11,7 +11,7 @@ RUN apt-get update \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
         > /etc/apt/sources.list.d/docker.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
+    && apt-get install -y --no-install-recommends git docker-ce-cli docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/* \
     && printf '#!/bin/sh\nexec docker compose "$@"\n' > /usr/local/bin/docker-compose \
     && chmod +x /usr/local/bin/docker-compose
@@ -21,6 +21,9 @@ RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 COPY casc.yaml /usr/share/jenkins/ref/casc.yaml
 ENV CASC_JENKINS_CONFIG=/usr/share/jenkins/ref/casc.yaml
-ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+# The repo is bind-mounted locally, so allow Git to check out from a local path.
+ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
+RUN git config --system --add safe.directory /workspace \
+    && git config --system --add safe.directory /workspace/.git
 
 USER jenkins

@@ -17,21 +17,25 @@ pipeline {
             }
         }
 
+        // Runs against the bind-mounted /workspace (same files, same containers the host already sees)
+        // so this never spins up a second, port-conflicting copy of the stack.
         stage('Build') {
             steps {
-                sh '''
-                    docker build -f app/Dockerfile -t kong-poc:backend app/
-                    docker build -f Dockerfile -t kong-poc:kong .
-                '''
+                dir('/workspace') {
+                    sh '''
+                        docker build -f app/Dockerfile -t kong-poc:backend app/
+                        docker build -f Dockerfile -t kong-poc:kong .
+                    '''
+                }
             }
         }
 
+        // Only touches backend+kong; jenkins is never included so the pipeline can't recreate itself.
         stage('Start Services') {
             steps {
-                sh '''
-                    docker-compose down -v 2>/dev/null || true
-                    docker-compose up -d
-                '''
+                dir('/workspace') {
+                    sh 'docker compose -p kong-poc up -d --no-deps backend kong'
+                }
             }
         }
 
@@ -78,20 +82,27 @@ pipeline {
 
         stage('Verify Setup') {
             steps {
-                sh '''
-                    docker-compose ps
-                    curl -s http://localhost:8001/services
-                '''
+                dir('/workspace') {
+                    sh '''
+                        docker compose -p kong-poc ps backend kong
+                        curl -s http://localhost:8001/services
+                    '''
+                }
             }
         }
     }
 
     post {
+        // Scoped to backend/kong only - jenkins keeps running so it can report this result.
         failure {
-            sh 'docker-compose logs || true'
+            dir('/workspace') {
+                sh 'docker compose -p kong-poc logs backend kong || true'
+            }
         }
         always {
-            sh 'docker-compose down -v || true'
+            dir('/workspace') {
+                sh 'docker compose -p kong-poc rm -fsv backend kong || true'
+            }
         }
     }
 }

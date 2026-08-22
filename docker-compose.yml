@@ -51,11 +51,13 @@ services:
     restart: unless-stopped
 
   # Boots with the pipeline job pre-created from ./Jenkinsfile (see jenkins/casc.yaml).
+  # Runs as root so it can use the mounted host docker.sock regardless of host GID.
   jenkins:
     build:
       context: ./jenkins
       dockerfile: Dockerfile
     container_name: kong-jenkins
+    user: root
     ports:
       - "${JENKINS_PORT:-8080}:8080"
     environment:
