@@ -1,0 +1,83 @@
+# Declarative config: Kong loads this file directly, no database required.
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: backend-service
+    url: http://backend:5000
+
+routes:
+  # No auth or rate limiting, used for container health checks.
+  - name: health-check
+    service: backend-service
+    paths:
+      - /health
+    methods:
+      - GET
+    strip_path: false
+
+  # Rate limited only.
+  - name: ping-endpoint
+    service: backend-service
+    paths:
+      - /api/ping
+    methods:
+      - GET
+    strip_path: false
+    plugins:
+      - name: rate-limiting
+        config:
+          minute: 100
+
+  # Requires a valid x-environment header, then rate limited.
+  - name: hello-endpoint
+    service: backend-service
+    paths:
+      - /api/hello
+    methods:
+      - GET
+    strip_path: false
+    plugins:
+      - name: x-environment-validator
+        config:
+          allowed_environments: "DEV,UAT,PROD"
+          header_name: "x-environment"
+      - name: rate-limiting
+        config:
+          minute: 50
+
+  # Requires an API key, then rate limited.
+  - name: data-endpoint
+    service: backend-service
+    paths:
+      - /api/data
+    methods:
+      - GET
+    strip_path: false
+    plugins:
+      - name: key-auth
+        config:
+          key_names:
+            - apikey
+          hide_credentials: false
+      - name: rate-limiting
+        config:
+          minute: 30
+
+# Consumers own the API keys used by key-auth above.
+consumers:
+  - username: demo-user
+    custom_id: demo-user-001
+    keyauth_credentials:
+      - key: demo-api-key-12345
+        tags:
+          - demo
+
+  - username: test-user
+    custom_id: test-user-002
+    keyauth_credentials:
+      - key: test-api-key-67890
+        tags:
+          - test
+
+

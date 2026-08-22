@@ -1,0 +1,15 @@
+# Keeps build context small and out of Docker images.
+.git
+.vscode
+.idea
+node_modules
+npm-debug.log
+.env
+Dockerfile
+docker-compose*.yml
+Jenkinsfile
+.github
+README.md
+*.md
+
+.DS_Store

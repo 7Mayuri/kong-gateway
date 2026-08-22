@@ -1,0 +1,23 @@
+{
+  "name": "kong-backend",
+  "version": "1.0.0",
+  "description": "Tiny backend service for Kong API Gateway",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "kong",
+    "api-gateway",
+    "express"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

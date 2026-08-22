@@ -1,0 +1,78 @@
+# Runs the Node.js backend and Kong gateway together on one network.
+services:
+  backend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: kong-backend
+    ports:
+      - "${BACKEND_PORT:-5000}:5000"
+    environment:
+      - NODE_ENV=production
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  # Kong loads kong/kong.yml at startup (db-less mode, no database needed).
+  kong:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kong-gateway
+    depends_on:
+      - backend
+    ports:
+      - "${KONG_PROXY_PORT:-8000}:8000"
+      - "${KONG_ADMIN_PORT:-8001}:8001"
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+      - KONG_ADMIN_LISTEN=0.0.0.0:8001
+      - KONG_LOG_LEVEL=info
+      - KONG_PLUGINS=bundled,x-environment-validator
+    volumes:
+      - ./kong/kong.yml:/etc/kong/kong.yml:ro
+      - ./kong/plugins/x-environment-validator:/usr/local/share/lua/5.1/kong/plugins/x-environment-validator:ro
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/status"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  # Boots with the pipeline job pre-created from ./Jenkinsfile (see jenkins/casc.yaml).
+  jenkins:
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
+    container_name: kong-jenkins
+    ports:
+      - "${JENKINS_PORT:-8080}:8080"
+    environment:
+      - JENKINS_OPTS=--prefix=/
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace
+    networks:
+      - kong-net
+    restart: unless-stopped
+
+networks:
+  kong-net:
+    driver: bridge
+
+volumes:
+  jenkins_home:
+
+

@@ -1,0 +1,29 @@
+jenkins:
+  systemMessage: "Kong POC Jenkins - pipeline job is pre-created from Jenkinsfile"
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: admin
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+jobs:
+  - script: >
+      pipelineJob('kong-poc-pipeline') {
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('/workspace')
+                }
+              }
+            }
+            scriptPath('Jenkinsfile')
+          }
+        }
+      }
