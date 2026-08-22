@@ -46,8 +46,12 @@ kong-poc/
 │       └── x-environment-validator/
 │           ├── handler.lua # Plugin logic
 │           └── schema.lua  # Plugin config schema
+├── jenkins/
+│   ├── Dockerfile           # Jenkins image with Docker CLI + git baked in
+│   ├── plugins.txt          # Jenkins plugins installed at build time
+│   └── casc.yaml            # Auto-creates the kong-poc-pipeline job on boot
 ├── Dockerfile               # Kong image (bundles the custom plugin)
-├── docker-compose.yml       # Runs backend + kong together
+├── docker-compose.yml       # Runs backend + kong + jenkins together
 ├── .env                     # Port overrides
 ├── Jenkinsfile              # CI pipeline
 └── README.md
@@ -208,28 +212,34 @@ docker-compose down -v      # stop and remove everything
 
 ## Jenkins Pipeline
 
-`docker-compose up` never touches Jenkins — Jenkins is not one of the services in `docker-compose.yml` and nothing here starts it automatically. The `Jenkinsfile` is a separate script that only runs *inside a Jenkins server*, and that server is the one calling `docker-compose` on your behalf, the same way you'd call it by hand from a terminal.
+`docker-compose up` starts three services: `backend`, `kong`, and `jenkins`. Jenkins comes up with the `kong-poc-pipeline` job **already created** (via Jenkins Configuration-as-Code, see `jenkins/casc.yaml`) — no manual "New Item" step needed. Jenkins is bind-mounted at `/workspace` and shares the host's Docker socket, so its pipeline builds/starts the *same* `backend` and `kong` containers you already have, rather than a second conflicting copy; it never touches its own `jenkins` container.
 
 What the pipeline does, stage by stage:
 
-1. **Checkout** - Jenkins pulls this repository (`checkout scm`)
-2. **Build** - runs `docker build` for the backend image and the Kong image, same Dockerfiles used above
-3. **Start Services** - runs `docker-compose up -d` to boot both containers
-4. **Wait for Services** - polls `/health` and `/status` until both containers respond
-5. **Test: Valid Request** - `curl` with a correct `x-environment: DEV` header, expects 200
-6. **Test: Missing Header** - `curl` with no header, expects 400
-7. **Test: Invalid Header** - `curl` with `x-environment: INVALID`, expects 403
-8. **Verify Setup** - prints `docker-compose ps` and Kong's `/services` list as evidence
-9. **post { failure / always }** - on failure it dumps `docker-compose logs`; either way it runs `docker-compose down -v` to tear everything down
+1. **Checkout** - Jenkins clones the repo (from the bind-mounted `/workspace`, which is a real git repo) to read the `Jenkinsfile`
+2. **Build** - runs `docker build` for the backend image and the Kong image against `/workspace`, same Dockerfiles used above
+3. **Start Services** - runs `docker compose -p kong-poc up -d --no-deps backend kong` (jenkins is excluded on purpose)
+4. **Wait for Services** - polls `backend:5000/health` and `kong:8001/status` (service names on the shared `kong-net` network, not `localhost`) until both respond
+5. **Test: Valid Request** - `curl` against `kong:8000/api/hello` with a correct `x-environment: DEV` header, expects 200
+6. **Test: Missing Header** - same URL with no header, expects 400
+7. **Test: Invalid Header** - same URL with `x-environment: INVALID`, expects 403
+8. **Verify Setup** - prints `docker compose ps` and Kong's `/services` list as evidence
+9. **post { failure / always }** - on failure it dumps backend/kong logs; either way it removes just the `backend`/`kong` containers, leaving Jenkins running
 
-To actually run it, you need a Jenkins instance (local install, Docker container running Jenkins, or a hosted one) with **Docker available to the Jenkins agent**, since the pipeline itself shells out to `docker` and `docker-compose`. Steps:
+To trigger a build once the stack is up:
 
-1. Install/start Jenkins (e.g. `docker run -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock jenkins/jenkins`, so the Jenkins container can reach the host's Docker daemon)
-2. In Jenkins: **New Item → Pipeline**
-3. Under "Pipeline", choose **Pipeline script from SCM**, point it at this repo, and set the script path to `Jenkinsfile`
-4. Click **Build Now** — Jenkins then runs the 8 stages above and shows pass/fail per stage in its console output
+1. Open `http://localhost:8080` and log in with `admin` / `admin` (change this if you expose Jenkins beyond your own machine)
+2. Open the **kong-poc-pipeline** job
+3. Click **Build Now**
+4. Watch the console output for the 8 stages above
 
-If you don't have a Jenkins server, the `Jenkinsfile` is still evidence of the CI design (it is not required to actually execute for the manual test commands in this README to work — those you can always run directly with the `docker-compose` commands above).
+You can also trigger it from the command line:
+
+```bash
+curl -u admin:admin -X POST "http://localhost:8080/job/kong-poc-pipeline/build"
+```
+
+If you'd rather point a separate, external Jenkins server at this repo instead of using the bundled one, the same `Jenkinsfile` also works from **New Item → Pipeline → Pipeline script from SCM**, script path `Jenkinsfile` — no changes needed, since `checkout scm` and the `backend`/`kong` service names work the same way there too, as long as that Jenkins agent also has Docker access and joins the same compose network.
 
 ## Troubleshooting
 
