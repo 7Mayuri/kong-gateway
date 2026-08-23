@@ -1,9 +1,6 @@
-cookies.txt
-crumb.json
-
-build*.txt
-
+# Generated verification reports
 test-report.html
-
 reports/index.html
 
+# Editor and tooling
+.vscode/
