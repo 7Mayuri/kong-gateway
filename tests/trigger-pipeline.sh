@@ -66,15 +66,19 @@ echo "==========================================================================
 curl -s -u "$USER_PASS" "$JENKINS/job/$JOB/$BUILD/consoleText"
 
 echo ""
-echo "=============================================================================="
-if [ "$RESULT" = "SUCCESS" ]; then
-  say "$GREEN" "  Pipeline result: SUCCESS"
-else
-  say "$RED" "  Pipeline result: ${RESULT:-TIMED OUT}"
-fi
-echo "=============================================================================="
 echo ""
-say "$WHITE" "  Open the test report:  $REPORT_URL"
+say "$WHITE" "###############################################################################"
+say "$WHITE" "#"
+if [ "$RESULT" = "SUCCESS" ]; then
+  say "$GREEN" "#   ALL TESTS PASSED"
+else
+  say "$RED"   "#   PIPELINE RESULT: ${RESULT:-TIMED OUT}"
+fi
+say "$WHITE" "#"
+say "$WHITE" "#   OPEN THE TEST REPORT:"
+say "$CYAN"  "#   $REPORT_URL"
+say "$WHITE" "#"
+say "$WHITE" "###############################################################################"
 echo ""
 
 [ "$RESULT" = "SUCCESS" ] || exit 1

@@ -30,11 +30,21 @@ pipeline {
             }
         }
 
-        // Only touches backend+kong; jenkins is never included so the pipeline can't recreate itself.
+        // Compose records its working directory on the containers, and that path differs
+        // inside Jenkins, so an unconditional "up" would recreate containers that are already
+        // running and detach them from the user's compose session. Only start what is missing.
         stage('Start Services') {
             steps {
                 dir('/workspace') {
-                    sh 'docker compose -p kong-poc up -d --no-deps backend kong'
+                    sh '''
+                        if curl -sf -o /dev/null http://backend:5000/health && \
+                           curl -sf -o /dev/null http://kong:8001/status; then
+                            echo "backend and kong are already running, reusing them"
+                        else
+                            echo "starting backend and kong"
+                            docker compose -p kong-poc up -d --no-deps backend kong
+                        fi
+                    '''
                 }
             }
         }
