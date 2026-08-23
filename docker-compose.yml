@@ -17,7 +17,7 @@ services:
   # Kong loads kong/kong.yml at startup (db-less mode, no database needed).
   kong:
     build:
-      context: .
+      context: ./kong
       dockerfile: Dockerfile
     container_name: kong-gateway
     depends_on:

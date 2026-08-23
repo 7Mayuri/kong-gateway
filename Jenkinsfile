@@ -24,7 +24,7 @@ pipeline {
                 dir('/workspace') {
                     sh '''
                         docker build -f app/Dockerfile -t kong-poc:backend app/
-                        docker build -f Dockerfile -t kong-poc:kong .
+                        docker build -f kong/Dockerfile -t kong-poc:kong kong/
                     '''
                 }
             }

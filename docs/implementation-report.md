@@ -84,7 +84,7 @@ Backend image (`app/Dockerfile`):
   actually receives `SIGTERM`.
 * Declares its own `HEALTHCHECK` using a Node HTTP probe, because the Alpine image has no curl.
 
-Kong image (root `Dockerfile`):
+Kong image (`kong/Dockerfile`):
 
 * Based on `kong:3.4`.
 * Copies the custom plugin into `/usr/local/share/lua/5.1/kong/plugins/` and `kong.yml` into
@@ -101,7 +101,8 @@ Compose (`docker-compose.yml`):
 
 Supporting files:
 
-* `.dockerignore` keeps the build context small and stops local artefacts entering images.
+* `app/.dockerignore` keeps a local `npm install` out of the backend build context. Each image
+  builds from its own small directory, so no other ignore rules are needed.
 * `.gitattributes` forces LF endings on `.sh`, `.lua`, `.yml`, `Dockerfile`, and `Jenkinsfile`,
   so files checked out on Windows still run inside Linux containers.
 
@@ -249,10 +250,9 @@ Gateway:
 
 ## Point 7: Automated Test Suite
 
-Two equivalent scripts, `tests/test.sh` (Linux and macOS) and `tests/test.ps1` (Windows
-PowerShell), run after the stack is up and cover 33 scenarios split into two groups:
-assignment scenarios and additional edge cases. Screenshots and console output from a real
-run are in [test evidence](test-evidence.md).
+One script, `tests/test.sh`, runs after the stack is up and covers 33 scenarios split into two
+groups: assignment scenarios and additional edge cases. Screenshots and console output from a
+real run are in [test evidence](test-evidence.md).
 
 | Section | Coverage                                                                            |
 |---------|--------------------------------------------------------------------------------------|

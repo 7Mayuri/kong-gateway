@@ -42,9 +42,11 @@ kong-poc/
 ├── app/
 │   ├── server.js           # Express backend
 │   ├── package.json        # Node dependencies
-│   └── Dockerfile          # Backend image
+│   ├── Dockerfile          # Backend image
+│   └── .dockerignore       # Keeps a local npm install out of the build context
 ├── kong/
-│   ├── kong.yml             # Kong declarative config (services, routes, consumers, plugins)
+│   ├── Dockerfile           # Kong image (bundles the custom plugin and config)
+│   ├── kong.yml             # Declarative config (service, routes, consumers, plugins)
 │   └── plugins/
 │       └── x-environment-validator/
 │           ├── handler.lua # Plugin logic
@@ -56,10 +58,9 @@ kong-poc/
 ├── tests/
 │   ├── Dockerfile           # Small runner image (bash, curl, docker CLI)
 │   ├── trigger-pipeline.sh  # Triggers the Jenkins job from the ci profile
-│   ├── test.sh              # Full scenario + edge case suite (Linux/macOS)
-│   └── test.ps1             # Same suite for Windows PowerShell
-├── reports/                 # Pipeline writes index.html here, served on :8090
-├── Dockerfile               # Kong image (bundles the custom plugin)
+│   └── test.sh              # Full scenario + edge case suite
+├── reports/
+│   └── placeholder.html     # Shown at :8090 until the pipeline generates a report
 ├── docker-compose.yml       # backend + kong + jenkins + report + info (+ ci pipeline)
 ├── .env                     # Port overrides
 ├── Jenkinsfile              # CI pipeline
@@ -148,8 +149,10 @@ docker-compose up -d          # start in the background
 docker-compose ps             # confirm containers are healthy
 curl http://localhost:5000/health
 curl http://localhost:8001/status
-.\tests\test.ps1                    # or ./tests/test.sh, run the suite yourself
+bash tests/test.sh            # run the suite yourself
 ```
+
+On Windows, run `bash tests/test.sh` from Git Bash or WSL, or just use the pipeline.
 
 ### Ports
 
@@ -214,23 +217,17 @@ PowerShell equivalent:
 
 ## Automated Test Suite
 
-One command runs every scenario and prints the exact curl command, the HTTP status, and
-the real response body for each. Start the stack in one terminal, run the script in another.
+The suite is a single script, `tests/test.sh`. The Jenkins pipeline runs it, and you can also
+run it directly against a running stack:
 
 ```bash
-# Terminal 1
-docker-compose up
-
-# Terminal 2 - Linux / macOS / Git Bash
-chmod +x tests/test.sh
-./tests/test.sh
-
-# Terminal 2 - Windows PowerShell
-.\tests\test.ps1
+docker-compose up -d          # terminal 1
+bash tests/test.sh            # terminal 2
 ```
 
-Results are split into two groups so it is obvious what the brief asked for and what was
-added on top:
+It prints the exact curl command, the HTTP status, and the real response body for every
+scenario. Results are split into two groups so it is obvious what the brief asked for and
+what was added on top:
 
 **Part A - Assignment Scenarios (11)** — the scenarios explicitly required by the brief.
 
@@ -266,47 +263,25 @@ Every run writes a self-contained page showing each scenario as a card with its 
 expected vs actual status, and response body, grouped into Part A and Part B with a pass/fail
 summary at the top.
 
-When the pipeline runs it as part of `docker-compose up`, the report is written to
-`reports/index.html` and served by the `report` container, so you get a real clickable URL:
+When the Jenkins pipeline runs it, the report is written to `reports/index.html` and served
+by the `report` container at <http://localhost:8090>. It is also archived as a Jenkins build
+artifact, so you can download it from the build page.
 
-```text
-  Open the test report:  http://localhost:8090
-```
-
-It is also archived as a Jenkins build artifact, so you can download it from the build page.
-
-When you run the script yourself on the host it writes `test-report.html` next to the script
-and prints a `file://` link instead. Either way you can have it opened automatically:
-
-```bash
-OPEN=1 ./tests/test.sh
-```
-
-```powershell
-.\tests\test.ps1 -Open
-```
-
-The Jenkins pipeline runs the same script and archives the report as a build artifact.
+When you run the script directly it writes `test-report.html` in the current directory and
+prints a `file://` link, or set `REPORT_PATH` to put it wherever you want.
 
 ### Flags
 
 ```bash
-SKIP_RESILIENCE=1 ./tests/test.sh                  # don't stop/start the backend container
-SKIP_RATELIMIT=1 ./tests/test.sh                   # don't burn the rate limit quota
-NO_REPORT=1 ./tests/test.sh                        # console only, no HTML
-OPEN=1 ./tests/test.sh                             # open the report when finished
-KONG_URL=http://kong:8000 ./tests/test.sh          # run from inside another container
-REPORT_PATH=/tmp/report.html ./tests/test.sh       # write the report elsewhere
+SKIP_RESILIENCE=1 bash tests/test.sh                  # don't stop/start the backend container
+SKIP_RATELIMIT=1 bash tests/test.sh                   # don't burn the rate limit quota
+NO_REPORT=1 bash tests/test.sh                        # console only, no HTML
+OPEN=1 bash tests/test.sh                             # open the report when finished
+KONG_URL=http://kong:8000 bash tests/test.sh          # run from inside another container
+REPORT_PATH=/tmp/report.html bash tests/test.sh       # write the report elsewhere
 ```
 
-```powershell
-.\tests\test.ps1 -SkipResilience -SkipRateLimit
-.\tests\test.ps1 -NoReport
-.\tests\test.ps1 -Open
-.\tests\test.ps1 -KongUrl http://localhost:8000 -ReportPath C:\temp\report.html
-```
-
-Both scripts exit non-zero if any scenario fails, so they double as a CI gate.
+The script exits non-zero if any scenario fails, which is what makes it usable as a CI gate.
 
 Note: A11 deliberately uses up the `/api/data` quota, which is why it runs last. If you
 re-run the script immediately, wait a minute or pass the skip flag.
