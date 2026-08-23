@@ -85,18 +85,19 @@ pipeline {
         stage('Full Test Suite') {
             steps {
                 dir('/workspace') {
-                    // Report goes to the Jenkins workspace so it can be archived.
+                    // reports/ is bind-mounted from the project and served by the report container.
                     sh '''
                         KONG_URL=http://kong:8000 \
                         ADMIN_URL=http://kong:8001 \
                         BACKEND_URL=http://backend:5000 \
-                        REPORT_PATH="$WORKSPACE/test-report.html" \
+                        REPORT_PATH=/workspace/reports/index.html \
                         bash test.sh
                     '''
                 }
             }
             post {
                 always {
+                    sh 'cp /workspace/reports/index.html "$WORKSPACE/test-report.html" || true'
                     archiveArtifacts artifacts: 'test-report.html', allowEmptyArchive: true
                 }
             }
@@ -115,15 +116,11 @@ pipeline {
     }
 
     post {
-        // Scoped to backend/kong only - jenkins keeps running so it can report this result.
+        // Deliberately does not remove backend/kong: compose owns their lifecycle,
+        // and tearing them down here would kill the stack the reviewer just started.
         failure {
             dir('/workspace') {
                 sh 'docker compose -p kong-poc logs backend kong || true'
-            }
-        }
-        always {
-            dir('/workspace') {
-                sh 'docker compose -p kong-poc rm -fsv backend kong || true'
             }
         }
     }

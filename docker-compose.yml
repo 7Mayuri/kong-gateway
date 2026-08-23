@@ -59,29 +59,25 @@ services:
       - kong-net
     restart: unless-stopped
 
-  # Runs the full suite once both services report healthy, then exits.
-  # Writes the report into ./reports, which the report service below serves.
-  tests:
+  # Waits for Jenkins, runs the pipeline (which runs the whole suite), then exits.
+  # This is what makes a plain "docker-compose up" verify the stack end to end.
+  pipeline:
     build:
       context: ./tests
       dockerfile: Dockerfile
-    container_name: kong-tests
+    container_name: kong-pipeline
     depends_on:
       backend:
         condition: service_healthy
       kong:
         condition: service_healthy
-    working_dir: /workspace
+      jenkins:
+        condition: service_started
     environment:
-      - KONG_URL=http://kong:8000
-      - ADMIN_URL=http://kong:8001
-      - BACKEND_URL=http://backend:5000
-      - REPORT_PATH=/workspace/reports/index.html
+      - JENKINS_URL=http://jenkins:8080
+      - JOB_NAME=kong-poc-pipeline
+      - JENKINS_AUTH=admin:admin
       - REPORT_URL=http://localhost:${REPORT_PORT:-8090}
-    volumes:
-      - .:/workspace
-      # Needed so the resilience scenarios can stop and start the backend.
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - kong-net
     restart: "no"

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# One command: build, start everything, wait for the suite, then open the report.
+# One command for a reviewer: build, start Kong, run the Jenkins pipeline,
+# then open the HTML report.
 #
 #   ./run.sh
 
@@ -9,15 +10,15 @@ echo "Building and starting the stack..."
 docker-compose up -d --build || { echo "docker-compose failed."; exit 1; }
 
 echo ""
-echo "Waiting for the test suite to finish..."
-EXIT_CODE=$(docker wait kong-tests)
+echo "Waiting for the Jenkins pipeline to finish (a few minutes on first run)..."
+EXIT_CODE=$(docker wait kong-pipeline)
 
 echo ""
-docker logs kong-tests 2>&1
+docker logs kong-pipeline 2>&1
 
 URL="http://localhost:${REPORT_PORT}"
 echo ""
-echo "  Report: $URL"
+echo "  Test report: $URL"
 
 if [ -z "$NO_OPEN" ]; then
   if command -v xdg-open > /dev/null 2>&1; then xdg-open "$URL" > /dev/null 2>&1 &
@@ -26,7 +27,8 @@ if [ -z "$NO_OPEN" ]; then
 fi
 
 echo ""
-echo "The gateway is still running. Stop everything with: docker-compose down"
+echo "Kong is still on http://localhost:8000, Jenkins on http://localhost:8080 (admin/admin)."
+echo "Stop everything with: docker-compose down"
 
 [ "$EXIT_CODE" != "0" ] && exit 1
 exit 0

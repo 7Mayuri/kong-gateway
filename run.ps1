@@ -1,4 +1,5 @@
-# One command: build, start everything, wait for the suite, then open the report.
+# One command for a reviewer: build, start Kong, run the Jenkins pipeline,
+# then open the HTML report.
 #
 #   .\run.ps1
 
@@ -15,23 +16,24 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host ""
-Write-Host "Waiting for the test suite to finish..." -ForegroundColor Cyan
-$exitCode = docker wait kong-tests
+Write-Host "Waiting for the Jenkins pipeline to finish (a few minutes on first run)..." -ForegroundColor Cyan
+$exitCode = docker wait kong-pipeline
 
 Write-Host ""
 # 2>&1 | Out-Host keeps the container output in order with the lines below.
-docker logs kong-tests 2>&1 | Out-Host
+docker logs kong-pipeline 2>&1 | Out-Host
 
 $url = "http://localhost:$ReportPort"
 Write-Host ""
-Write-Host "  Report: $url" -ForegroundColor Cyan
+Write-Host "  Test report: $url" -ForegroundColor Cyan
 
 if (-not $NoOpen) {
     Start-Process $url
 }
 
 Write-Host ""
-Write-Host "The gateway is still running. Stop everything with: docker-compose down" -ForegroundColor DarkGray
+Write-Host "Kong is still on http://localhost:8000, Jenkins on http://localhost:8080 (admin/admin)." -ForegroundColor DarkGray
+Write-Host "Stop everything with: docker-compose down" -ForegroundColor DarkGray
 
 if ([int]$exitCode -ne 0) { exit 1 }
 exit 0
