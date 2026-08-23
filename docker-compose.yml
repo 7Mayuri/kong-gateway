@@ -59,6 +59,45 @@ services:
       - kong-net
     restart: unless-stopped
 
+  # Runs the full suite once both services report healthy, then exits.
+  # Writes the report into ./reports, which the report service below serves.
+  tests:
+    build:
+      context: ./tests
+      dockerfile: Dockerfile
+    container_name: kong-tests
+    depends_on:
+      backend:
+        condition: service_healthy
+      kong:
+        condition: service_healthy
+    working_dir: /workspace
+    environment:
+      - KONG_URL=http://kong:8000
+      - ADMIN_URL=http://kong:8001
+      - BACKEND_URL=http://backend:5000
+      - REPORT_PATH=/workspace/reports/index.html
+      - REPORT_URL=http://localhost:${REPORT_PORT:-8090}
+    volumes:
+      - .:/workspace
+      # Needed so the resilience scenarios can stop and start the backend.
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - kong-net
+    restart: "no"
+
+  # Serves ./reports so the generated report has a real clickable URL.
+  report:
+    image: nginx:alpine
+    container_name: kong-report
+    ports:
+      - "${REPORT_PORT:-8090}:80"
+    volumes:
+      - ./reports:/usr/share/nginx/html:ro
+    networks:
+      - kong-net
+    restart: unless-stopped
+
 networks:
   kong-net:
     driver: bridge

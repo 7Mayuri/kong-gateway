@@ -362,6 +362,7 @@ emit_cards() {
 }
 
 if [ -z "$NO_REPORT" ]; then
+  mkdir -p "$(dirname "$REPORT_PATH")"
   DURATION=$(( $(date +%s) - STARTED_EPOCH ))
   if [ "$FAILED" -eq 0 ]; then OVERALL="ALL PASSED"; OVERALL_CLS="pass"; else OVERALL="$FAILED FAILED"; OVERALL_CLS="fail"; fi
 
@@ -460,6 +461,10 @@ HTMLTAIL
   REPORT_URI="file://$(printf '%s' "$REPORT_FULL" | sed 's/ /%20/g')"
 
   printf '\n%s  HTML report%s\n' "$CYAN" "$NC"
+  if [ -n "$REPORT_URL" ]; then
+    # Served by the report container, so this link works from the host browser.
+    printf '%s    open  %s%s\n' "$WHITE" "$REPORT_URL" "$NC"
+  fi
   printf '    file  %s\n' "$REPORT_FULL"
   printf '%s    link  %s%s\n' "$CYAN" "$REPORT_URI" "$NC"
 
@@ -467,7 +472,7 @@ HTMLTAIL
     if command -v xdg-open > /dev/null 2>&1; then xdg-open "$REPORT_FULL" > /dev/null 2>&1 &
     elif command -v open > /dev/null 2>&1; then open "$REPORT_FULL" > /dev/null 2>&1 &
     fi
-  else
+  elif [ -z "$REPORT_URL" ]; then
     printf '%s    (ctrl+click the link above, or re-run with OPEN=1 to launch it automatically)%s\n' "$GREY" "$NC"
   fi
 fi
