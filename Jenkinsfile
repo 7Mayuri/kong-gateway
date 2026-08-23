@@ -81,6 +81,20 @@ pipeline {
             }
         }
 
+        // The three stages above are quick smoke checks; this runs the full edge case suite.
+        stage('Full Test Suite') {
+            steps {
+                dir('/workspace') {
+                    sh '''
+                        KONG_URL=http://kong:8000 \
+                        ADMIN_URL=http://kong:8001 \
+                        BACKEND_URL=http://backend:5000 \
+                        bash test.sh
+                    '''
+                }
+            }
+        }
+
         stage('Verify Setup') {
             steps {
                 dir('/workspace') {

@@ -17,6 +17,8 @@ routes:
     strip_path: false
 
   # Rate limited only.
+  # policy: local keeps counters in each Kong node's memory - fine for one node,
+  # but switch to redis if you run several Kong replicas or limits multiply per node.
   - name: ping-endpoint
     service: backend-service
     paths:
@@ -28,6 +30,8 @@ routes:
       - name: rate-limiting
         config:
           minute: 100
+          policy: local
+          fault_tolerant: true
 
   # Requires a valid x-environment header, then rate limited.
   - name: hello-endpoint
@@ -45,6 +49,8 @@ routes:
       - name: rate-limiting
         config:
           minute: 50
+          policy: local
+          fault_tolerant: true
 
   # Requires an API key, then rate limited.
   - name: data-endpoint
@@ -63,6 +69,8 @@ routes:
       - name: rate-limiting
         config:
           minute: 30
+          policy: local
+          fault_tolerant: true
 
 # Consumers own the API keys used by key-auth above.
 consumers:

@@ -4,19 +4,25 @@ local plugin = {
   VERSION = "1.0.0"
 }
 
--- Turns "dev, uat,prod" into {"DEV","UAT","PROD"}.
-local function split_string(str)
+local function trim(str)
+  return (str:match("^%s*(.-)%s*$"))
+end
+
+-- Turns "dev, uat,prod" into {"DEV","UAT","PROD"}, skipping blank entries.
+local function parse_allowed(str)
   local result = {}
   for value in str:gmatch("[^,]+") do
-    local trimmed = value:match("^%s*(.-)%s*$"):upper()
-    table.insert(result, trimmed)
+    local cleaned = trim(value):upper()
+    if cleaned ~= "" then
+      table.insert(result, cleaned)
+    end
   end
   return result
 end
 
-local function is_allowed(value, allowed_list)
-  for _, allowed in ipairs(allowed_list) do
-    if value:upper() == allowed then
+local function contains(list, value)
+  for _, allowed in ipairs(list) do
+    if value == allowed then
       return true
     end
   end
@@ -24,32 +30,40 @@ local function is_allowed(value, allowed_list)
 end
 
 function plugin:access(config)
-  local allowed_env_str = config.allowed_environments or "DEV,UAT,PROD"
   local header_name = config.header_name or "x-environment"
+  local allowed = parse_allowed(config.allowed_environments or "DEV,UAT,PROD")
 
-  local allowed_environments = split_string(allowed_env_str)
-
-  -- Kong exposes headers as ngx vars with dashes turned into underscores.
-  local header_var_name = "http_" .. header_name:lower():gsub("-", "_")
-  local header_value = ngx.var[header_var_name]
-
-  if not header_value or header_value == "" then
-    ngx.status = 400
-    ngx.header.content_type = "application/json"
-    ngx.say('{"error":"Missing x-environment header"}')
-    return ngx.exit(400)
+  -- Misconfigured plugin: fail closed instead of silently allowing every request.
+  if #allowed == 0 then
+    kong.log.err("x-environment-validator: allowed_environments resolved to an empty list")
+    return kong.response.exit(500, { error = "Server misconfiguration" })
   end
 
-  if not is_allowed(header_value, allowed_environments) then
-    ngx.status = 403
-    ngx.header.content_type = "application/json"
-    ngx.say('{"error":"Invalid x-environment header. Allowed values: DEV, UAT, PROD"}')
-    return ngx.exit(403)
+  -- get_headers (not get_header) is what surfaces a repeated header as a table.
+  local value = kong.request.get_headers()[header_name]
+
+  -- A repeated header arrives as a table; the intended environment is ambiguous.
+  if type(value) == "table" then
+    return kong.response.exit(400, {
+      error = "Duplicate " .. header_name .. " header"
+    })
   end
 
-  kong.log.debug("x-environment header validated: " .. header_value:upper())
+  if value then
+    value = trim(value)
+  end
+
+  if not value or value == "" then
+    return kong.response.exit(400, {
+      error = "Missing " .. header_name .. " header"
+    })
+  end
+
+  if not contains(allowed, value:upper()) then
+    return kong.response.exit(403, {
+      error = "Invalid " .. header_name .. " header. Allowed values: " .. table.concat(allowed, ", ")
+    })
+  end
 end
-
-
 
 return plugin

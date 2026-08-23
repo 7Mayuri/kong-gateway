@@ -3,7 +3,8 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(express.json());
+// Cap the body size so an oversized payload can't exhaust memory.
+app.use(express.json({ limit: '10kb' }));
 
 // Used by Docker/Kong health checks, no auth required.
 app.get('/health', (req, res) => {
@@ -46,7 +47,14 @@ app.use((req, res) => {
   });
 });
 
+// Errors skip the 404 handler above and land here, so every failure stays JSON.
 app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Malformed JSON body', status: 'error' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Payload too large', status: 'error' });
+  }
   console.error(err.stack);
   res.status(500).json({
     error: 'Internal Server Error',
@@ -54,7 +62,29 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend service listening on port ${PORT}`);
+});
+
+// Let in-flight requests finish so rolling restarts and scale-downs don't drop traffic.
+function shutdown(signal) {
+  console.log(`${signal} received, closing server`);
+  server.close(() => process.exit(0));
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+  shutdown('uncaughtException');
 });
 

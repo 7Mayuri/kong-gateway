@@ -1,0 +1,6 @@
+# Shell scripts and Lua must keep LF endings or they break inside Linux containers.
+*.sh text eol=lf
+*.lua text eol=lf
+*.yml text eol=lf
+Dockerfile text eol=lf
+Jenkinsfile text eol=lf
