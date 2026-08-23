@@ -59,20 +59,14 @@ services:
       - kong-net
     restart: unless-stopped
 
-  # Waits for Jenkins, runs the pipeline (which runs the whole suite), then exits.
-  # This is what makes a plain "docker-compose up" verify the stack end to end.
+  # Opt-in: triggers the Jenkins pipeline from the command line instead of the UI.
+  #   docker-compose --profile ci up pipeline
   pipeline:
+    profiles: ["ci"]
     build:
       context: ./tests
       dockerfile: Dockerfile
     container_name: kong-pipeline
-    depends_on:
-      backend:
-        condition: service_healthy
-      kong:
-        condition: service_healthy
-      jenkins:
-        condition: service_started
     environment:
       - JENKINS_URL=http://jenkins:8080
       - JOB_NAME=kong-poc-pipeline
@@ -93,6 +87,43 @@ services:
     networks:
       - kong-net
     restart: unless-stopped
+
+  # Prints where everything is as soon as the stack is up, then exits.
+  info:
+    image: alpine:3.20
+    container_name: kong-info
+    depends_on:
+      backend:
+        condition: service_healthy
+      kong:
+        condition: service_healthy
+    volumes:
+      - ./reports:/reports
+    command:
+      - sh
+      - -c
+      - |
+        [ -f /reports/index.html ] || cp /reports/placeholder.html /reports/index.html
+        echo ""
+        echo "##############################################################################"
+        echo "#"
+        echo "#   STACK IS UP"
+        echo "#"
+        echo "#   Kong proxy    http://localhost:${KONG_PROXY_PORT:-8000}"
+        echo "#   Kong admin    http://localhost:${KONG_ADMIN_PORT:-8001}"
+        echo "#   Backend       http://localhost:${BACKEND_PORT:-5000}"
+        echo "#   Jenkins       http://localhost:${JENKINS_PORT:-8080}   (admin / admin)"
+        echo "#"
+        echo "#   TEST REPORT   http://localhost:${REPORT_PORT:-8090}"
+        echo "#"
+        echo "#   Run the kong-poc-pipeline job in Jenkins to generate the report,"
+        echo "#   or run:  docker-compose --profile ci up pipeline"
+        echo "#"
+        echo "##############################################################################"
+        echo ""
+    networks:
+      - kong-net
+    restart: "no"
 
 networks:
   kong-net:
