@@ -1,6 +1,6 @@
 #!/usr/bin/env groovy
 
-// Builds both images, boots the stack, and checks the x-environment plugin behavior.
+// Build, start, and test the stack.
 pipeline {
     agent any
 
@@ -17,8 +17,7 @@ pipeline {
             }
         }
 
-        // Runs against the bind-mounted /workspace (same files, same containers the host already sees)
-        // so this never spins up a second, port-conflicting copy of the stack.
+        // Build images from the shared workspace.
         stage('Build') {
             steps {
                 dir('/workspace') {
@@ -30,9 +29,7 @@ pipeline {
             }
         }
 
-        // Compose records its working directory on the containers, and that path differs
-        // inside Jenkins, so an unconditional "up" would recreate containers that are already
-        // running and detach them from the user's compose session. Only start what is missing.
+        // Reuse healthy services when available.
         stage('Start Services') {
             steps {
                 dir('/workspace') {
@@ -49,7 +46,7 @@ pipeline {
             }
         }
 
-        // Jenkins reaches these as sibling containers on kong-net, not via localhost.
+        // Wait for services on the shared network.
         stage('Wait for Services') {
             steps {
                 sh '''
@@ -66,7 +63,7 @@ pipeline {
             }
         }
 
-        // x-environment-validator sits on /api/hello, not /api/ping.
+        // Check a valid environment request.
         stage('Test: Valid Request') {
             steps {
                 sh 'curl -i -H "x-environment: DEV" http://kong:8000/api/hello'
@@ -91,11 +88,11 @@ pipeline {
             }
         }
 
-        // The three stages above are quick smoke checks; this runs the full edge case suite.
+        // Run the complete test suite.
         stage('Full Test Suite') {
             steps {
                 dir('/workspace') {
-                    // reports/ is bind-mounted from the project and served by the report container.
+                    // Write the report to the shared reports folder.
                     sh '''
                         KONG_URL=http://kong:8000 \
                         ADMIN_URL=http://kong:8001 \
@@ -126,8 +123,7 @@ pipeline {
     }
 
     post {
-        // Deliberately does not remove backend/kong: compose owns their lifecycle,
-        // and tearing them down here would kill the stack the reviewer just started.
+        // Show service logs when the pipeline fails.
         failure {
             dir('/workspace') {
                 sh 'docker compose -p kong-poc logs backend kong || true'

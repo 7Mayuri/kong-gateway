@@ -1,4 +1,4 @@
-# Jenkins with Docker CLI baked in, so pipeline stages can run docker-compose.
+# Add Docker tools to Jenkins.
 FROM jenkins/jenkins:lts-jdk17
 
 USER root
@@ -21,7 +21,7 @@ RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 COPY casc.yaml /usr/share/jenkins/ref/casc.yaml
 ENV CASC_JENKINS_CONFIG=/usr/share/jenkins/ref/casc.yaml
-# The repo is bind-mounted locally, so allow Git to check out from a local path.
+# Allow Git to use the mounted workspace.
 ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
 RUN git config --system --add safe.directory /workspace \
     && git config --system --add safe.directory /workspace/.git

@@ -1,4 +1,4 @@
-# Bakes the custom plugin and declarative config into the Kong image.
+# Include the custom plugin and Kong config.
 FROM kong:3.4
 
 USER root

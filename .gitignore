@@ -1,12 +1,12 @@
-# Node dependencies, only present if you run npm install outside Docker
+# Ignore local Node dependencies.
 node_modules/
 npm-debug.log*
 
-# Generated verification reports
+# Ignore generated reports.
 reports/index.html
 test-report.html
 
-# Editor and OS noise
+# Ignore editor and OS files.
 .vscode/
 .idea/
 .DS_Store

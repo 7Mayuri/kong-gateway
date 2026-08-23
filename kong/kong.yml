@@ -1,4 +1,4 @@
-# Declarative config: Kong loads this file directly, no database required.
+# Load Kong declaratively without a database.
 _format_version: "3.0"
 _transform: true
 
@@ -7,7 +7,7 @@ services:
     url: http://backend:5000
 
 routes:
-  # No auth or rate limiting, used for container health checks.
+  # Expose the health check.
   - name: health-check
     service: backend-service
     paths:
@@ -16,9 +16,7 @@ routes:
       - GET
     strip_path: false
 
-  # Rate limited only.
-  # policy: local keeps counters in each Kong node's memory - fine for one node,
-  # but switch to redis if you run several Kong replicas or limits multiply per node.
+  # Rate limit ping requests.
   - name: ping-endpoint
     service: backend-service
     paths:
@@ -33,7 +31,7 @@ routes:
           policy: local
           fault_tolerant: true
 
-  # Requires a valid x-environment header, then rate limited.
+  # Validate the environment and rate limit requests.
   - name: hello-endpoint
     service: backend-service
     paths:
@@ -52,7 +50,7 @@ routes:
           policy: local
           fault_tolerant: true
 
-  # Requires an API key, then rate limited.
+  # Require an API key and rate limit requests.
   - name: data-endpoint
     service: backend-service
     paths:
@@ -72,7 +70,7 @@ routes:
           policy: local
           fault_tolerant: true
 
-# Consumers own the API keys used by key-auth above.
+# Define credentials for key authentication.
 consumers:
   - username: demo-user
     custom_id: demo-user-001

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Waits for Jenkins, triggers the kong-poc-pipeline job, streams the result,
-# and points at the generated report. Runs as the "pipeline" compose service.
+# Trigger Jenkins and display the generated report.
 
 JENKINS="${JENKINS_URL:-http://jenkins:8080}"
 JOB="${JOB_NAME:-kong-poc-pipeline}"
@@ -11,7 +10,7 @@ CYAN=$'\033[0;36m'; GREEN=$'\033[0;32m'; RED=$'\033[0;31m'; WHITE=$'\033[1;37m';
 
 say() { printf '%s%s%s\n' "$1" "$2" "$NC"; }
 
-# ---------------------------------------------------------------------------
+# Wait for Jenkins.
 say "$CYAN" "Waiting for Jenkins to come up..."
 for i in $(seq 1 120); do
   curl -sf -o /dev/null "$JENKINS/login" && break
@@ -32,12 +31,12 @@ if ! curl -sf -o /dev/null -u "$USER_PASS" "$JENKINS/job/$JOB/api/json"; then
   exit 1
 fi
 
-# The build we are about to start.
+# Find the next build number.
 BUILD=$(curl -s -u "$USER_PASS" "$JENKINS/job/$JOB/api/json" \
         | sed -n 's/.*"nextBuildNumber":\([0-9]*\).*/\1/p')
 [ -z "$BUILD" ] && BUILD=1
 
-# Crumb and session cookie must come from the same request for CSRF to pass.
+# Get the Jenkins crumb and session cookie.
 curl -s -c /tmp/jenkins-cookies -u "$USER_PASS" "$JENKINS/crumbIssuer/api/json" -o /tmp/crumb.json
 CRUMB=$(sed -n 's/.*"crumb":"\([^"]*\)".*/\1/p' /tmp/crumb.json)
 FIELD=$(sed -n 's/.*"crumbRequestField":"\([^"]*\)".*/\1/p' /tmp/crumb.json)

@@ -1,5 +1,4 @@
-# Runner image: test.sh needs bash and curl, the trigger script talks to the Jenkins API,
-# and the docker CLI is there for the resilience scenarios.
+# Add tools used by the test runner.
 FROM alpine:3.20
 
 RUN apk add --no-cache bash curl docker-cli

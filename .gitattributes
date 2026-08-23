@@ -1,4 +1,4 @@
-# Shell scripts and Lua must keep LF endings or they break inside Linux containers.
+# Keep shell and Lua files in LF format.
 *.sh text eol=lf
 *.lua text eol=lf
 *.yml text eol=lf

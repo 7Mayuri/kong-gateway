@@ -1,4 +1,4 @@
-# Runs the Node.js backend and Kong gateway together on one network.
+# Run the stack on one network.
 services:
   backend:
     build:
@@ -11,10 +11,10 @@ services:
       - NODE_ENV=production
     networks:
       - kong-net
-    # Healthcheck comes from app/Dockerfile (the node image has no curl).
+    # Use the image healthcheck.
     restart: unless-stopped
 
-  # Kong loads kong/kong.yml at startup (db-less mode, no database needed).
+  # Load Kong in DB-less mode.
   kong:
     build:
       context: ./kong
@@ -32,15 +32,13 @@ services:
       - KONG_ADMIN_LISTEN=0.0.0.0:8001
       - KONG_LOG_LEVEL=info
       - KONG_PLUGINS=bundled,x-environment-validator
-    # kong.yml and the plugin are baked into the image by ./Dockerfile,
-    # no bind mount needed (also keeps this working when Jenkins runs it via docker.sock).
+    # Include Kong config in the image.
     networks:
       - kong-net
-    # Healthcheck comes from ./Dockerfile.
+    # Use the image healthcheck.
     restart: unless-stopped
 
-  # Boots with the pipeline job pre-created from ./Jenkinsfile (see jenkins/casc.yaml).
-  # Runs as root so it can use the mounted host docker.sock regardless of host GID.
+  # Run Jenkins with the pipeline job configured.
   jenkins:
     build:
       context: ./jenkins
@@ -59,8 +57,7 @@ services:
       - kong-net
     restart: unless-stopped
 
-  # Opt-in: triggers the Jenkins pipeline from the command line instead of the UI.
-  #   docker-compose --profile ci up pipeline
+  # Trigger the pipeline from the command line.
   pipeline:
     profiles: ["ci"]
     build:
@@ -76,7 +73,7 @@ services:
       - kong-net
     restart: "no"
 
-  # Serves ./reports so the generated report has a real clickable URL.
+  # Serve the generated report.
   report:
     image: nginx:alpine
     container_name: kong-report
@@ -88,7 +85,7 @@ services:
       - kong-net
     restart: unless-stopped
 
-  # Prints where everything is as soon as the stack is up, then exits.
+  # Print service links after startup.
   info:
     image: alpine:3.20
     container_name: kong-info

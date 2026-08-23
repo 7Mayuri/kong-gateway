@@ -1,12 +1,12 @@
-// Minimal Express backend sitting behind the Kong gateway.
+// Start the Express backend behind Kong.
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Cap the body size so an oversized payload can't exhaust memory.
+// Limit request body size.
 app.use(express.json({ limit: '10kb' }));
 
-// Used by Docker/Kong health checks, no auth required.
+// Serve health checks without authentication.
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -47,7 +47,7 @@ app.use((req, res) => {
   });
 });
 
-// Errors skip the 404 handler above and land here, so every failure stays JSON.
+// Return JSON for application errors.
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'Malformed JSON body', status: 'error' });
@@ -66,7 +66,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend service listening on port ${PORT}`);
 });
 
-// Let in-flight requests finish so rolling restarts and scale-downs don't drop traffic.
+// Shut down gracefully.
 function shutdown(signal) {
   console.log(`${signal} received, closing server`);
   server.close(() => process.exit(0));

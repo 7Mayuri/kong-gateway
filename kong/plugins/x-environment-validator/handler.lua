@@ -1,4 +1,4 @@
--- Custom Kong plugin: blocks requests missing or failing the x-environment header check.
+-- Validate the x-environment header.
 local plugin = {
   PRIORITY = 900,
   VERSION = "1.0.0"
@@ -8,7 +8,7 @@ local function trim(str)
   return (str:match("^%s*(.-)%s*$"))
 end
 
--- Turns "dev, uat,prod" into {"DEV","UAT","PROD"}, skipping blank entries.
+-- Parse and normalize allowed values.
 local function parse_allowed(str)
   local result = {}
   for value in str:gmatch("[^,]+") do
@@ -33,16 +33,16 @@ function plugin:access(config)
   local header_name = config.header_name or "x-environment"
   local allowed = parse_allowed(config.allowed_environments or "DEV,UAT,PROD")
 
-  -- Misconfigured plugin: fail closed instead of silently allowing every request.
+  -- Reject an empty configuration.
   if #allowed == 0 then
     kong.log.err("x-environment-validator: allowed_environments resolved to an empty list")
     return kong.response.exit(500, { error = "Server misconfiguration" })
   end
 
-  -- get_headers (not get_header) is what surfaces a repeated header as a table.
+  -- Read all headers to detect duplicates.
   local value = kong.request.get_headers()[header_name]
 
-  -- A repeated header arrives as a table; the intended environment is ambiguous.
+  -- Reject duplicate headers.
   if type(value) == "table" then
     return kong.response.exit(400, {
       error = "Duplicate " .. header_name .. " header"

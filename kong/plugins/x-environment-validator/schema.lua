@@ -1,4 +1,4 @@
--- Config options Kong accepts for this plugin.
+-- Define plugin configuration.
 return {
   name = "x-environment-validator",
   fields = {

@@ -1,17 +1,5 @@
 #!/usr/bin/env bash
-# Runs every assignment scenario and every extra edge case against the running stack,
-# prints the exact command and response for each, and writes an HTML report.
-#
-#   docker-compose up -d      # terminal 1
-#   ./test.sh                 # terminal 2
-#
-# Overrides:
-#   KONG_URL / ADMIN_URL / BACKEND_URL   target a different host
-#   REPORT_PATH                          where to write the HTML report
-#   SKIP_RESILIENCE=1                    do not stop/start the backend container
-#   SKIP_RATELIMIT=1                     do not burn the rate limit quota
-#   NO_REPORT=1                          console output only
-#   OPEN=1                               open the report in the default browser
+# Run scenarios and write an HTML report.
 
 KONG_URL="${KONG_URL:-http://localhost:8000}"
 ADMIN_URL="${ADMIN_URL:-http://localhost:8001}"
@@ -28,9 +16,7 @@ R_GROUP=(); R_ID=(); R_NAME=(); R_CMD=(); R_EXP=(); R_ACT=(); R_BODY=(); R_STATU
 STARTED_EPOCH=$(date +%s)
 STARTED_AT=$(date '+%Y-%m-%d %H:%M:%S')
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+# Define test helpers.
 
 fmt_cmd() {
   local out="curl -i" a
@@ -43,7 +29,7 @@ fmt_cmd() {
   printf '%s' "$out"
 }
 
-# Sets REQ_CODE and REQ_BODY.
+# Capture the response.
 req() {
   local raw
   raw=$(curl -s -w $'\n%{http_code}' "$@" 2>/dev/null)
@@ -66,7 +52,7 @@ add_result() {
   printf '%s      $ %s%s\n' "$GREY" "$cmd" "$NC"
   [ -n "$actual" ] && printf '      -> HTTP %s   (expected %s)\n' "$actual" "$expected"
   if [ -n "$body" ]; then
-    # printf with \n so the final line is not dropped by read at EOF.
+    # Preserve the final output line.
     printf '%s\n' "$body" | head -n 4 | while IFS= read -r line; do
       printf '%s      %s%s\n' "$CYAN" "$line" "$NC"
     done
@@ -75,7 +61,7 @@ add_result() {
   printf '%s      %s%s\n' "$color" "$status" "$NC"
 }
 
-# scenario <group> <id> <name> <expected> <contains> <note> -- <curl args...>
+# Run an HTTP scenario.
 scenario() {
   local group="$1" id="$2" name="$3" expected="$4" contains="$5" note="$6"
   shift 6
@@ -98,7 +84,7 @@ group_header() {
   printf '\n%s%s\n  %s\n%s%s\n' "$CYAN" "==============================================================================" "$1" "==============================================================================" "$NC"
 }
 
-# ---------------------------------------------------------------------------
+# Print the verification header.
 printf '\n%sKong API Gateway - verification run%s\n' "$WHITE" "$NC"
 echo "Kong proxy : $KONG_URL"
 echo "Kong admin : $ADMIN_URL"
@@ -116,9 +102,7 @@ if [ "$REQ_CODE" != "200" ]; then
   exit 1
 fi
 
-# ===========================================================================
 group_header "PART A - $GROUP_A"
-# ===========================================================================
 
 scenario "$GROUP_A" A1 "Sample app is deployed and reachable through Docker" \
   200 "ok" "Requirement 1: dockerized backend responds" \
@@ -162,9 +146,7 @@ scenario "$GROUP_A" A10 "Invalid x-environment returns HTTP 403 with a JSON erro
 
 printf '\n%s  (A11, the rate limiting burst, runs at the end because it uses up the route quota)%s\n' "$GREY" "$NC"
 
-# ===========================================================================
 group_header "PART B - $GROUP_B"
-# ===========================================================================
 
 scenario "$GROUP_B" B1 "Lowercase value is accepted (case-insensitive match)" \
   200 "Hello" "Plugin uppercases before comparing" \
@@ -283,10 +265,7 @@ else
     "No manual gateway intervention is needed"
 fi
 
-# ===========================================================================
-# Deferred to the end: this exhausts the /api/data quota, so running it earlier
-# would make the other /api/data scenarios fail with 429. It belongs to Part A.
-# ===========================================================================
+# Run the rate-limit scenario last.
 group_header "PART A (continued) - rate limiting"
 
 if [ -n "$SKIP_RATELIMIT" ]; then
@@ -306,9 +285,7 @@ else
     "Requirement 3: rate-limiting plugin on /api/data"
 fi
 
-# ===========================================================================
-# Summary
-# ===========================================================================
+# Print the test summary.
 
 PASSED=0; FAILED=0; SKIPPED=0; A_PASS=0; A_TOTAL=0; B_PASS=0; B_TOTAL=0
 for i in "${!R_ID[@]}"; do
@@ -338,9 +315,7 @@ if [ "$FAILED" -gt 0 ]; then
   done
 fi
 
-# ---------------------------------------------------------------------------
-# HTML report
-# ---------------------------------------------------------------------------
+# Write the HTML report.
 
 esc() { printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
 
@@ -457,12 +432,12 @@ HTMLTAIL
 
   REPORT_DIR=$(cd "$(dirname "$REPORT_PATH")" && pwd)
   REPORT_FULL="$REPORT_DIR/$(basename "$REPORT_PATH")"
-  # Percent-encode spaces so the file:// link stays clickable in terminals.
+  # Encode spaces in the local report link.
   REPORT_URI="file://$(printf '%s' "$REPORT_FULL" | sed 's/ /%20/g')"
 
   printf '\n%s  HTML report%s\n' "$CYAN" "$NC"
   if [ -n "$REPORT_URL" ]; then
-    # Served by the report container, so this link works from the host browser.
+    # Print the hosted report link.
     printf '%s    open  %s%s\n' "$WHITE" "$REPORT_URL" "$NC"
   fi
   printf '    file  %s\n' "$REPORT_FULL"
