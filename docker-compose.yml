@@ -103,7 +103,6 @@ services:
       - sh
       - -c
       - |
-        [ -f /reports/index.html ] || cp /reports/placeholder.html /reports/index.html
         echo ""
         echo "##############################################################################"
         echo "#"

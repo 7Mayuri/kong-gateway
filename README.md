@@ -59,8 +59,6 @@ kong-poc/
 │   ├── Dockerfile           # Small runner image (bash, curl, docker CLI)
 │   ├── trigger-pipeline.sh  # Triggers the Jenkins job from the ci profile
 │   └── test.sh              # Full scenario + edge case suite
-├── reports/
-│   └── placeholder.html     # Shown at :8090 until the pipeline generates a report
 ├── docker-compose.yml       # backend + kong + jenkins + report + info (+ ci pipeline)
 ├── .env                     # Port overrides
 ├── Jenkinsfile              # CI pipeline
@@ -82,26 +80,14 @@ cd kong-poc
 docker-compose up
 ```
 
-This is quick, around 10 to 15 seconds once the images are built. It does not run any tests,
-it just brings up the gateway and Jenkins and tells you where everything is:
+This is quick, around 10 to 15 seconds once the images are built. The `kong-info` service runs
+once health checks pass and prints all the service ports, including:
 
-```text
-##############################################################################
-#
-#   STACK IS UP
-#
-#   Kong proxy    http://localhost:8000
-#   Kong admin    http://localhost:8001
-#   Backend       http://localhost:5000
-#   Jenkins       http://localhost:8080   (admin / admin)
-#
-#   TEST REPORT   http://localhost:8090
-#
-#   Run the kong-poc-pipeline job in Jenkins to generate the report,
-#   or run:  docker-compose --profile ci up pipeline
-#
-##############################################################################
 ```
+TEST REPORT   http://localhost:8090
+```
+
+The report page appears after you run the pipeline (see step 2 below).
 
 ### 2. Run the pipeline
 
