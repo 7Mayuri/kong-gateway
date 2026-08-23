@@ -53,11 +53,12 @@ kong-poc/
 │   ├── plugins.txt          # Jenkins plugins installed at build time
 │   └── casc.yaml            # Auto-creates the kong-poc-pipeline job on boot
 ├── tests/
-│   └── Dockerfile           # Small runner image (bash, curl, docker CLI) for test.sh
-├── reports/                 # Generated report lands here and is served on :8090
+│   ├── Dockerfile           # Small runner image (bash, curl, docker CLI)
+│   └── trigger-pipeline.sh  # Waits for Jenkins and runs the pipeline on startup
+├── reports/                 # Pipeline writes index.html here, served on :8090
 ├── Dockerfile               # Kong image (bundles the custom plugin)
-├── docker-compose.yml       # backend + kong + jenkins + tests + report
-├── run.ps1 / run.sh         # One command: start stack, run suite, open report
+├── docker-compose.yml       # backend + kong + jenkins + pipeline + report
+├── run.ps1 / run.sh         # One command: start stack, run pipeline, open report
 ├── test.sh                  # Full scenario + edge case suite (Linux/macOS)
 ├── test.ps1                 # Same suite for Windows PowerShell
 ├── .env                     # Port overrides
@@ -83,22 +84,36 @@ cd kong-poc
 docker-compose up
 ```
 
-That single command builds the images, starts the backend, Kong, and Jenkins, waits until
-the backend and Kong report healthy, then **runs the full verification suite automatically**
-and prints every scenario with its command and response. At the end it prints:
+That single command does the whole flow:
+
+1. Builds the backend, Kong, and Jenkins images
+2. Starts Kong and the backend, and waits until both report healthy
+3. Starts Jenkins with the `kong-poc-pipeline` job already created
+4. **Triggers the pipeline automatically**, which builds, boots, and runs every test scenario
+5. Streams the pipeline output into your terminal
+6. Prints the report link
+
+The last thing you see is:
 
 ```text
-  HTML report
-    open  http://localhost:8090
+==============================================================================
+  Pipeline result: SUCCESS
+==============================================================================
+
+  Open the test report:  http://localhost:8090
 ```
 
-Open that URL to see the report. It stays available while the stack is running.
+Open that URL and you get the full HTML report: every scenario with the exact command
+that ran, the expected and actual status, and the response body, split into assignment
+scenarios and edge cases.
 
-### One command including opening the report
+The stack stays running afterwards, so Kong is still available on port 8000 for manual
+testing and Jenkins on port 8080 (`admin` / `admin`).
 
-A container cannot launch a browser on your machine, so if you want the report to open by
-itself, use the wrapper instead. It starts the stack, waits for the suite, prints the output,
-and opens the report for you.
+### If you want the browser to open by itself
+
+A container cannot launch a browser on your machine, so use the wrapper instead. It does
+exactly the same thing and then opens the report for you.
 
 ```powershell
 .\run.ps1        # Windows
@@ -125,7 +140,7 @@ curl http://localhost:8001/status
 | 8000 | Kong proxy (send your API requests here) |
 | 8001 | Kong admin API |
 | 5000 | Backend, exposed for direct testing |
-| 8080 | Jenkins |
+| 8080 | Jenkins (`admin` / `admin`) |
 | 8090 | Verification report |
 
 All are overridable in `.env`.
@@ -233,13 +248,14 @@ Every run writes a self-contained page showing each scenario as a card with its 
 expected vs actual status, and response body, grouped into Part A and Part B with a pass/fail
 summary at the top.
 
-When the suite runs as part of `docker-compose up`, the report is written to `reports/index.html`
-and served by the `report` container, so you get a real clickable URL:
+When the pipeline runs it as part of `docker-compose up`, the report is written to
+`reports/index.html` and served by the `report` container, so you get a real clickable URL:
 
 ```text
-  HTML report
-    open  http://localhost:8090
+  Open the test report:  http://localhost:8090
 ```
+
+It is also archived as a Jenkins build artifact, so you can download it from the build page.
 
 When you run the script yourself on the host it writes `test-report.html` next to the script
 and prints a `file://` link instead. Either way you can have it opened automatically:
