@@ -29,7 +29,7 @@ this file is the implementation write-up.
 | 4 | Custom plugin validating `x-environment` with proper error responses            | Done   | `kong/plugins/x-environment-validator/`                                                           |
 | 5 | Jenkins pipeline automating build and test                                      | Done   | `Jenkinsfile`, `jenkins/`                                                                         |
 | 6 | Containerization and security best practices                                    | Done   | `app/Dockerfile`, `docker-compose.yml`                                                            |
-| 7 | Documentation, configuration files, test commands, and validation evidence      | Done   | `README.md`, this document, `test.sh`, `test.ps1`                                                 |
+| 7 | Documentation, configuration files, test commands, and validation evidence      | Done   | `README.md`, this document, [test evidence](test-evidence.md), `tests/`                           |
 
 ## Architecture
 
@@ -210,7 +210,7 @@ Pipeline stages (`Jenkinsfile`):
 5. Test: Valid Request (expects 200)
 6. Test: Missing Header (expects 400)
 7. Test: Invalid Header (expects 403)
-8. Full Test Suite (runs `test.sh`, all 41 checks)
+8. Full Test Suite (runs `tests/test.sh`, all 33 scenarios)
 9. Verify Setup (prints container state and Kong services)
 
 Post actions dump backend and Kong logs on failure, and always remove the `backend` and `kong`
@@ -249,8 +249,10 @@ Gateway:
 
 ## Point 7: Automated Test Suite
 
-Two equivalent scripts, `test.sh` (Linux and macOS) and `test.ps1` (Windows PowerShell), run
-after the stack is up and cover 41 checks across 8 sections.
+Two equivalent scripts, `tests/test.sh` (Linux and macOS) and `tests/test.ps1` (Windows
+PowerShell), run after the stack is up and cover 33 scenarios split into two groups:
+assignment scenarios and additional edge cases. Screenshots and console output from a real
+run are in [test evidence](test-evidence.md).
 
 | Section | Coverage                                                                            |
 |---------|--------------------------------------------------------------------------------------|
@@ -266,7 +268,7 @@ after the stack is up and cover 41 checks across 8 sections.
 Points of note:
 
 * Both scripts exit non-zero on failure, so they double as a CI gate, which is exactly how the
-  Jenkins pipeline consumes `test.sh`.
+  Jenkins pipeline consumes `tests/test.sh`.
 * Base URLs are overridable, which is what allows the same script to run from the host
   (`localhost`) or from inside a container (`kong`, `backend`).
 * Destructive sections can be skipped with `SKIP_RESILIENCE` and `SKIP_RATELIMIT`.
