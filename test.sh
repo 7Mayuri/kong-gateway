@@ -11,6 +11,7 @@
 #   SKIP_RESILIENCE=1                    do not stop/start the backend container
 #   SKIP_RATELIMIT=1                     do not burn the rate limit quota
 #   NO_REPORT=1                          console output only
+#   OPEN=1                               open the report in the default browser
 
 KONG_URL="${KONG_URL:-http://localhost:8000}"
 ADMIN_URL="${ADMIN_URL:-http://localhost:8001}"
@@ -453,7 +454,22 @@ HTMLMID
 HTMLTAIL
   } > "$REPORT_PATH"
 
-  printf '\n%s  HTML report written to: %s%s\n' "$CYAN" "$(cd "$(dirname "$REPORT_PATH")" && pwd)/$(basename "$REPORT_PATH")" "$NC"
+  REPORT_DIR=$(cd "$(dirname "$REPORT_PATH")" && pwd)
+  REPORT_FULL="$REPORT_DIR/$(basename "$REPORT_PATH")"
+  # Percent-encode spaces so the file:// link stays clickable in terminals.
+  REPORT_URI="file://$(printf '%s' "$REPORT_FULL" | sed 's/ /%20/g')"
+
+  printf '\n%s  HTML report%s\n' "$CYAN" "$NC"
+  printf '    file  %s\n' "$REPORT_FULL"
+  printf '%s    link  %s%s\n' "$CYAN" "$REPORT_URI" "$NC"
+
+  if [ -n "$OPEN" ]; then
+    if command -v xdg-open > /dev/null 2>&1; then xdg-open "$REPORT_FULL" > /dev/null 2>&1 &
+    elif command -v open > /dev/null 2>&1; then open "$REPORT_FULL" > /dev/null 2>&1 &
+    fi
+  else
+    printf '%s    (ctrl+click the link above, or re-run with OPEN=1 to launch it automatically)%s\n' "$GREY" "$NC"
+  fi
 fi
 
 echo ""

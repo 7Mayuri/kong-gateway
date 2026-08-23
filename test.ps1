@@ -11,7 +11,8 @@ param(
     [string]$ReportPath = "test-report.html",
     [switch]$SkipResilience,
     [switch]$SkipRateLimit,
-    [switch]$NoReport
+    [switch]$NoReport,
+    [switch]$Open
 )
 
 $ErrorActionPreference = "Continue"
@@ -451,9 +452,18 @@ $bHtml
 
     $html | Set-Content -Path $ReportPath -Encoding UTF8
     $full = (Resolve-Path $ReportPath).Path
+    $uri = ([System.Uri]$full).AbsoluteUri
+
     Write-Host ""
-    Write-Host "  HTML report written to: $full" -ForegroundColor Cyan
-    Write-Host "  Open it with:  start $ReportPath" -ForegroundColor DarkGray
+    Write-Host "  HTML report" -ForegroundColor Cyan
+    Write-Host "    file  $full"
+    Write-Host "    link  $uri" -ForegroundColor Blue
+    if ($Open) {
+        Start-Process $full
+    }
+    else {
+        Write-Host "    (ctrl+click the link above, or re-run with -Open to launch it automatically)" -ForegroundColor DarkGray
+    }
 }
 
 Write-Host ""
