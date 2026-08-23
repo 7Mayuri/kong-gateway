@@ -96,14 +96,26 @@ That single command does the whole flow:
 The last thing you see is:
 
 ```text
-==============================================================================
-  Pipeline result: SUCCESS
-==============================================================================
-
-  Open the test report:  http://localhost:8090
+###############################################################################
+#
+#   ALL TESTS PASSED
+#
+#   OPEN THE TEST REPORT:
+#   http://localhost:8090
+#
+###############################################################################
 ```
 
-Open that URL and you get the full HTML report: every scenario with the exact command
+In the foreground, that banner is printed by the `kong-pipeline` service, so it appears
+among the Jenkins startup logs. If you would rather see only the pipeline output, start
+detached and follow that one container:
+
+```bash
+docker-compose up -d
+docker logs -f kong-pipeline
+```
+
+Open the URL and you get the full HTML report: every scenario with the exact command
 that ran, the expected and actual status, and the response body, split into assignment
 scenarios and edge cases.
 
