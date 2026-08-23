@@ -1,6 +1,13 @@
-# Generated verification reports
-test-report.html
-reports/index.html
+# Node dependencies, only present if you run npm install outside Docker
+node_modules/
+npm-debug.log*
 
-# Editor and tooling
+# Generated verification reports
+reports/index.html
+test-report.html
+
+# Editor and OS noise
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
