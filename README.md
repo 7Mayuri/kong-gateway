@@ -44,10 +44,10 @@ The `kong-info` service prints this status when the stack is ready:
 
 ## Useful Links
 
-Kong proxy: http://localhost:8000/
-Kong admin: http://localhost:8001/
-Backend: http://localhost:5000/
-Jenkins: http://localhost:8080/
+Kong proxy: http://localhost:8000/  
+Kong admin: http://localhost:8001/  
+Backend: http://localhost:5000/  
+Jenkins: http://localhost:8080/  
 Test report: http://localhost:8090/
 
 ## Technology Stack
