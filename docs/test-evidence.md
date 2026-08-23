@@ -22,13 +22,19 @@ open `http://localhost:8090` when the pipeline finishes.
 ```text
 docker-compose up
    |
-   +-- starts backend and Kong, waits until both are healthy
-   +-- starts Jenkins with the kong-poc-pipeline job pre-created
-   +-- the pipeline container triggers that job automatically
-   +-- the job runs tests/test.sh against the running gateway
-   +-- the suite writes reports/index.html
+   +-- starts backend, Kong, Jenkins and the report server
+   +-- prints where everything is, then stops (no tests run here)
+
+Run the kong-poc-pipeline job in Jenkins
+   |
+   +-- runs tests/test.sh against the running gateway
+   +-- writes reports/index.html
    +-- nginx serves it at http://localhost:8090
 ```
+
+Startup stays fast because the suite runs in the pipeline rather than during
+`docker-compose up`. The job can be started from the Jenkins UI or with
+`docker-compose --profile ci up pipeline`.
 
 The suite is one script, so the same 33 scenarios run whether they are triggered by Jenkins
 or by hand, and the report always reflects the run that just happened.

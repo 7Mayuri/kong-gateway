@@ -55,13 +55,12 @@ kong-poc/
 │   └── casc.yaml            # Auto-creates the kong-poc-pipeline job on boot
 ├── tests/
 │   ├── Dockerfile           # Small runner image (bash, curl, docker CLI)
-│   ├── trigger-pipeline.sh  # Waits for Jenkins and runs the pipeline on startup
+│   ├── trigger-pipeline.sh  # Triggers the Jenkins job from the ci profile
 │   ├── test.sh              # Full scenario + edge case suite (Linux/macOS)
 │   └── test.ps1             # Same suite for Windows PowerShell
 ├── reports/                 # Pipeline writes index.html here, served on :8090
 ├── Dockerfile               # Kong image (bundles the custom plugin)
-├── docker-compose.yml       # backend + kong + jenkins + pipeline + report
-├── run.ps1 / run.sh         # One command: start stack, run pipeline, open report
+├── docker-compose.yml       # backend + kong + jenkins + report + info (+ ci pipeline)
 ├── .env                     # Port overrides
 ├── Jenkinsfile              # CI pipeline
 └── README.md
@@ -74,27 +73,53 @@ kong-poc/
 
 ## Setup: Steps to Test After Pulling the Repo
 
-Run these in order from the project root.
+### 1. Start the stack
 
 ```bash
-# 1. Clone/pull and enter the project
 git clone <repo-url>
 cd kong-poc
-
-# 2. Build and start everything
 docker-compose up
 ```
 
-That single command does the whole flow:
+This is quick, around 10 to 15 seconds once the images are built. It does not run any tests,
+it just brings up the gateway and Jenkins and tells you where everything is:
 
-1. Builds the backend, Kong, and Jenkins images
-2. Starts Kong and the backend, and waits until both report healthy
-3. Starts Jenkins with the `kong-poc-pipeline` job already created
-4. **Triggers the pipeline automatically**, which builds, boots, and runs every test scenario
-5. Streams the pipeline output into your terminal
-6. Prints the report link
+```text
+##############################################################################
+#
+#   STACK IS UP
+#
+#   Kong proxy    http://localhost:8000
+#   Kong admin    http://localhost:8001
+#   Backend       http://localhost:5000
+#   Jenkins       http://localhost:8080   (admin / admin)
+#
+#   TEST REPORT   http://localhost:8090
+#
+#   Run the kong-poc-pipeline job in Jenkins to generate the report,
+#   or run:  docker-compose --profile ci up pipeline
+#
+##############################################################################
+```
 
-The last thing you see is:
+### 2. Run the pipeline
+
+Tests live in the Jenkins pipeline, so run it whichever way you prefer.
+
+From the Jenkins UI:
+
+1. Open <http://localhost:8080> and sign in with `admin` / `admin`
+2. Open the **kong-poc-pipeline** job
+3. Click **Build Now**
+
+Or from a terminal, which triggers the same job and streams the result:
+
+```bash
+docker-compose --profile ci up pipeline
+```
+
+The pipeline builds the images, checks the gateway is up, runs the three smoke tests, then
+runs the full suite and writes the report. It finishes with:
 
 ```text
 ###############################################################################
@@ -107,34 +132,14 @@ The last thing you see is:
 ###############################################################################
 ```
 
-In the foreground, that banner is printed by the `kong-pipeline` service, so it appears
-among the Jenkins startup logs. If you would rather see only the pipeline output, start
-detached and follow that one container:
+### 3. Open the report
 
-```bash
-docker-compose up -d
-docker logs -f kong-pipeline
-```
+<http://localhost:8090> shows every scenario with the exact command that ran, the expected
+and actual status, and the response body, split into assignment scenarios and edge cases.
+Before the first pipeline run the same URL shows a short placeholder explaining how to
+generate it.
 
-Open the URL and you get the full HTML report: every scenario with the exact command
-that ran, the expected and actual status, and the response body, split into assignment
-scenarios and edge cases.
-
-The stack stays running afterwards, so Kong is still available on port 8000 for manual
-testing and Jenkins on port 8080 (`admin` / `admin`).
-
-### If you want the browser to open by itself
-
-A container cannot launch a browser on your machine, so use the wrapper instead. It does
-exactly the same thing and then opens the report for you.
-
-```powershell
-.\run.ps1        # Windows
-```
-
-```bash
-./run.sh         # Linux / macOS
-```
+The stack keeps running throughout, so Kong stays available on port 8000 for manual testing.
 
 ### If you prefer to drive it manually
 
