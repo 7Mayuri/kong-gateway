@@ -179,10 +179,11 @@ ambiguous or unsafe input:
 
 ## Screenshot Evidence
 
-The following screenshot shows the real verification command output, including the assignment
-suite, important edge cases, Docker-network endpoints, and final result.
+The following screenshot shows the complete CLI output from the real verification run. It
+includes every `curl` command, the returned HTTP status and response, all assignment scenarios,
+the important edge cases, and the final result.
 
-![Console output showing the Kong verification suites and 33 passing tests](images/console-test-evidence.png)
+![Complete CLI output showing every Kong test command, response, and final passing summary](images/full-console-test-output.png)
 
 The complete captured output is available in [console-run-output.txt](console-run-output.txt).
 
