@@ -11,12 +11,7 @@ services:
       - NODE_ENV=production
     networks:
       - kong-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    # Healthcheck comes from app/Dockerfile (the node image has no curl).
     restart: unless-stopped
 
   # Kong loads kong/kong.yml at startup (db-less mode, no database needed).
@@ -41,12 +36,7 @@ services:
     # no bind mount needed (also keeps this working when Jenkins runs it via docker.sock).
     networks:
       - kong-net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/status"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+    # Healthcheck comes from ./Dockerfile.
     restart: unless-stopped
 
   # Boots with the pipeline job pre-created from ./Jenkinsfile (see jenkins/casc.yaml).
