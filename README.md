@@ -16,6 +16,13 @@ routes, consumers, and plugins, so the application is registered behind the gate
 version-controlled configuration file. The Kong Admin API is available for status and inspection,
 but it is not used to create these objects at runtime.
 
+## Prerequisites
+
+Install Docker Desktop or Docker Engine with Docker Compose v2 (`docker compose`).
+
+Node.js, Kong, Jenkins, Nginx, and the test runner are pulled as Docker images, so no separate
+installation of these tools is required.
+
 ## Local Setup
 
 1. Build the Docker images:
