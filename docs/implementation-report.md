@@ -1,16 +1,4 @@
----
-title: Kong API Gateway POC Implementation Report
-description: Short implementation and verification summary for the Kong API Gateway assignment
-author: Kong POC
-ms.date: 2026-08-23
-ms.topic: overview
-keywords:
-  - kong
-  - api gateway
-  - docker
-  - jenkins
-  - testing
----
+# Assignment Kong POC Implementation
 
 ## Overview
 
@@ -149,6 +137,22 @@ GET /api/data without an API key -> 401
 Rate-limit burst on /api/data -> 200 responses followed by 429 responses
 ```
 
+## Screenshot Evidence
+
+The generated report provides the same command, expected result, actual result, and response
+body for every test case. The screenshots below show the overall result and representative
+assignment and edge-case scenarios.
+
+![Verification report summary showing all scenarios passed](images/report-summary.png)
+
+![Missing x-environment header returning HTTP 400](images/report-scenario-missing-header.png)
+
+![Duplicate x-environment headers rejected with HTTP 400](images/report-scenario-duplicate-header.png)
+
+![Rate limiting returning HTTP 429 after the quota is exceeded](images/report-scenario-rate-limit.png)
+
+![Full verification report containing the assignment and edge-case suites](images/report-full.png)
+
 ## Container and Pipeline Notes
 
 The backend image uses `node:18-alpine`, installs production dependencies only, and runs as the
@@ -169,5 +173,5 @@ docker compose up -d
 docker compose --profile ci up --build --abort-on-container-exit pipeline
 ```
 
-Open the generated report at `http://localhost:8090/`. The main service links and troubleshooting
-steps are available in [README.md](../README.md).
+Open the generated report at `http://localhost:8090/`. For setup, service links, and
+troubleshooting steps, see the [project documentation in README.md](../README.md).
