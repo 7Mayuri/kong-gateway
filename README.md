@@ -144,9 +144,8 @@ PowerShell equivalent:
 
 ## Automated Test Suite
 
-Rather than running the curl commands above one at a time, there is a script that
-exercises every scenario plus the edge cases. Start the stack in one terminal, then
-run the script in a second terminal.
+One command runs every scenario and prints the exact curl command, the HTTP status, and
+the real response body for each. Start the stack in one terminal, run the script in another.
 
 ```bash
 # Terminal 1
@@ -160,36 +159,70 @@ chmod +x test.sh
 .\test.ps1
 ```
 
-It exits non-zero if anything fails, so it also works as a CI check.
+Results are split into two groups so it is obvious what the brief asked for and what was
+added on top:
 
-What it covers:
+**Part A - Assignment Scenarios (11)** — the scenarios explicitly required by the brief.
 
-| Section | Checks |
+| ID | Scenario | Requirement |
+|---|---|---|
+| A1 | Dockerized app is deployed and reachable | 1 |
+| A2 | Kong service and route proxy to the backend | 2 |
+| A3-A5 | Key auth: valid key → 200, no key → 401, unknown key → 401 | 3 |
+| A6-A8 | Custom plugin allows `DEV`, `UAT`, `PROD` | 4 |
+| A9 | Missing `x-environment` → 400 JSON error | 4 |
+| A10 | Invalid `x-environment` → 403 JSON error | 4 |
+| A11 | Rate limiting throttles a burst with 429 | 3 |
+
+**Part B - Edge Cases (22)** — everything covered beyond the brief.
+
+| ID | Scenario |
 |---|---|
-| 1. Preflight | backend and Kong admin API are reachable |
-| 2. Backend direct | all 4 endpoints plus a JSON 404, bypassing Kong |
-| 3. Backend error handling | malformed JSON body → 400, oversized body → 413 |
-| 4. Kong routing | health/ping proxying, unrouted path → 404, wrong method → 404 |
-| 5. x-environment validation | DEV/UAT/PROD, lowercase, mixed case, padded, missing → 400, unknown → 403, empty → 400, duplicate headers → 400, numeric → 403, near-miss `DEVELOPMENT` → 403, plugin-free route ignores the header, errors are JSON |
-| 6. Key authentication | both demo keys, key via query string, missing/invalid/empty key → 401 |
-| 7. Upstream failure | stops the backend, expects 502/503, confirms Kong survives, restarts and confirms recovery |
-| 8. Rate limiting | `RateLimit-*` headers present, a 40-request burst against a 30/min route produces 429s, 429 body is JSON |
+| B1-B3 | Lowercase, mixed case, and space-padded header values are accepted |
+| B4 | Header present but empty is treated as missing (400) |
+| B5 | Duplicate `x-environment` headers rejected (400) |
+| B6-B7 | Numeric value and near-miss `DEVELOPMENT` rejected (403) |
+| B8 | A route without the plugin ignores a bad value (proves per-route scoping) |
+| B9 | Plugin errors are JSON, never an HTML error page |
+| B10-B13 | Key via query string, empty key, second consumer, plugin independence |
+| B14-B16 | Unrouted path, wrong HTTP method, backend JSON 404 |
+| B17-B18 | Malformed JSON → 400, oversized body → 413 |
+| B19 | `RateLimit-*` headers are returned to the client |
+| B20-B22 | Backend stopped → 502, Kong stays healthy, traffic recovers on restart |
 
-Useful flags:
+### HTML report
+
+Every run also writes `test-report.html`, a self-contained page showing each scenario as a
+card with its command, expected vs actual status, and response body, grouped into Part A and
+Part B with a pass/fail summary at the top.
 
 ```bash
-SKIP_RESILIENCE=1 ./test.sh    # don't stop/start the backend container
-SKIP_RATELIMIT=1 ./test.sh     # don't burn the rate limit quota
-KONG_URL=http://kong:8000 ./test.sh   # run from inside another container
+./test.sh && open test-report.html      # macOS
+.\test.ps1; start test-report.html      # Windows
+```
+
+The Jenkins pipeline runs the same script and archives the report as a build artifact.
+
+### Flags
+
+```bash
+SKIP_RESILIENCE=1 ./test.sh                  # don't stop/start the backend container
+SKIP_RATELIMIT=1 ./test.sh                   # don't burn the rate limit quota
+NO_REPORT=1 ./test.sh                        # console only, no HTML
+KONG_URL=http://kong:8000 ./test.sh          # run from inside another container
+REPORT_PATH=/tmp/report.html ./test.sh       # write the report elsewhere
 ```
 
 ```powershell
 .\test.ps1 -SkipResilience -SkipRateLimit
-.\test.ps1 -KongUrl http://localhost:8000
+.\test.ps1 -NoReport
+.\test.ps1 -KongUrl http://localhost:8000 -ReportPath C:\temp\report.html
 ```
 
-Note: section 8 deliberately uses up the `/api/data` quota, so if you re-run the
-script immediately, wait a minute or pass the skip flag.
+Both scripts exit non-zero if any scenario fails, so they double as a CI gate.
+
+Note: A11 deliberately uses up the `/api/data` quota, which is why it runs last. If you
+re-run the script immediately, wait a minute or pass the skip flag.
 
 ## Available Endpoints
 

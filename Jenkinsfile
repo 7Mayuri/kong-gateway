@@ -85,12 +85,19 @@ pipeline {
         stage('Full Test Suite') {
             steps {
                 dir('/workspace') {
+                    // Report goes to the Jenkins workspace so it can be archived.
                     sh '''
                         KONG_URL=http://kong:8000 \
                         ADMIN_URL=http://kong:8001 \
                         BACKEND_URL=http://backend:5000 \
+                        REPORT_PATH="$WORKSPACE/test-report.html" \
                         bash test.sh
                     '''
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'test-report.html', allowEmptyArchive: true
                 }
             }
         }
