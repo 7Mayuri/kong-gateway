@@ -13,6 +13,8 @@ A minimal Kong API Gateway setup with a tiny Node.js Express backend, a custom p
 
 Kong runs in **DB-less (declarative) mode** — no Postgres container. All services, routes, consumers, and plugins are defined once in [kong/kong.yml](kong/kong.yml) and loaded on startup. This is intentional: the assignment only asks for service/route/consumer/plugin configuration, not a database-backed Kong setup, so declarative mode keeps the project simpler and fully reproducible with a single `docker-compose up`.
 
+For the full write-up of what was implemented, the design decisions behind it, problems solved, and verification results, see [docs/implementation-report.md](docs/implementation-report.md).
+
 ## Architecture
 
 ```
