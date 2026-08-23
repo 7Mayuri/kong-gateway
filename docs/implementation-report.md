@@ -137,21 +137,54 @@ GET /api/data without an API key -> 401
 Rate-limit burst on /api/data -> 200 responses followed by 429 responses
 ```
 
+## Console Output Evidence
+
+The test script prints each command, expected status, actual status, response, and final
+`PASS` or `FAIL` result. These are the important checks a reviewer can verify from the console:
+
+```text
+[A9] Missing x-environment returns HTTP 400 with a JSON error
+    $ curl -i http://kong:8000/api/hello
+    -> HTTP 400   (expected 400)
+    {"error":"Missing x-environment header"}
+    PASS
+
+[B5] Duplicate x-environment headers are rejected (400)
+    $ curl -i -H "x-environment: DEV" -H "x-environment: PROD" http://kong:8000/api/hello
+    -> HTTP 400   (expected 400)
+    {"error":"Duplicate x-environment header"}
+    PASS
+
+[B18] Oversized request body returns a JSON 413
+    -> HTTP 413   (expected 413)
+    PASS
+
+[A11] Rate limiting throttles a burst with HTTP 429
+    30 responses were 200, 10 were 429 (route limit is 30 per minute)
+    PASS
+```
+
+## Important Edge Cases
+
+The edge-case suite confirms that the gateway fails clearly and does not silently accept
+ambiguous or unsafe input:
+
+* Empty or missing `x-environment` is rejected with `400`.
+* Duplicate environment headers are rejected with `400` instead of using the first value.
+* Case and surrounding spaces are handled for valid values; near-miss values are still rejected.
+* Malformed JSON returns `400`, and a body over 10 kB returns `413`.
+* Missing or invalid API keys return `401`; a key on the query string is tested separately.
+* When the backend is stopped, Kong returns `502` or `503`, remains healthy, and recovers after
+  the backend restarts.
+
 ## Screenshot Evidence
 
-The generated report provides the same command, expected result, actual result, and response
-body for every test case. The screenshots below show the overall result and representative
-assignment and edge-case scenarios.
+The following screenshot shows the real verification command output, including the assignment
+suite, important edge cases, Docker-network endpoints, and final result.
 
-![Verification report summary showing all scenarios passed](images/report-summary.png)
+![Console output showing the Kong verification suites and 33 passing tests](images/console-test-evidence.png)
 
-![Missing x-environment header returning HTTP 400](images/report-scenario-missing-header.png)
-
-![Duplicate x-environment headers rejected with HTTP 400](images/report-scenario-duplicate-header.png)
-
-![Rate limiting returning HTTP 429 after the quota is exceeded](images/report-scenario-rate-limit.png)
-
-![Full verification report containing the assignment and edge-case suites](images/report-full.png)
+The complete captured output is available in [console-run-output.txt](console-run-output.txt).
 
 ## Container and Pipeline Notes
 

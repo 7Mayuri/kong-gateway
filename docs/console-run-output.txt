@@ -1,0 +1,273 @@
+
+[1;37mKong API Gateway - verification run[0m
+Kong proxy : http://kong-gateway:8000
+Kong admin : http://kong-gateway:8001
+Backend    : http://kong-backend:5000
+Started    : 2026-08-23 18:27:06
+
+[0;36m==============================================================================
+  PART A - Assignment Scenarios
+==============================================================================[0m
+
+[1;37m[A1] Sample app is deployed and reachable through Docker[0m
+[0;90m      $ curl -i http://kong-backend:5000/health[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"status":"ok","message":"Service is running"}[0m
+[0;90m      Requirement 1: dockerized backend responds[0m
+[0;32m      PASS[0m
+
+[1;37m[A2] Kong service and route proxy traffic to the backend[0m
+[0;90m      $ curl -i http://kong-gateway:8000/api/ping[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"message":"hello from app","status":"ok"}[0m
+[0;90m      Requirement 2: service and route configured in kong.yml[0m
+[0;32m      PASS[0m
+
+[1;37m[A3] Key authentication accepts a registered consumer key[0m
+[0;90m      $ curl -i -H "apikey: demo-api-key-12345" http://kong-gateway:8000/api/data[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"status":"ok","data":[{"id":1,"name":"Item A"},{"id":2,"name":"Item B"},{"id":3,"name":"Item C"}]}[0m
+[0;90m      Requirement 3: key-auth plugin, consumer demo-user[0m
+[0;32m      PASS[0m
+
+[1;37m[A4] Key authentication rejects a request with no key[0m
+[0;90m      $ curl -i http://kong-gateway:8000/api/data[0m
+      -> HTTP 401   (expected 401)
+[0;36m      {[0m
+[0;36m        "message":"No API key found in request"[0m
+[0;36m      }[0m
+[0;90m      Requirement 3: key-auth plugin[0m
+[0;32m      PASS[0m
+
+[1;37m[A5] Key authentication rejects an unknown key[0m
+[0;90m      $ curl -i -H "apikey: not-a-real-key" http://kong-gateway:8000/api/data[0m
+      -> HTTP 401   (expected 401)
+[0;36m      {[0m
+[0;36m        "message":"Invalid authentication credentials"[0m
+[0;36m      }[0m
+[0;90m      Requirement 3: key-auth plugin[0m
+[0;32m      PASS[0m
+
+[1;37m[A6] Custom plugin allows x-environment: DEV[0m
+[0;90m      $ curl -i -H "x-environment: DEV" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"message":"Hello, World!","status":"ok"}[0m
+[0;90m      Requirement 4: valid value passes through[0m
+[0;32m      PASS[0m
+
+[1;37m[A7] Custom plugin allows x-environment: UAT[0m
+[0;90m      $ curl -i -H "x-environment: UAT" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"message":"Hello, World!","status":"ok"}[0m
+[0;90m      Requirement 4: valid value passes through[0m
+[0;32m      PASS[0m
+
+[1;37m[A8] Custom plugin allows x-environment: PROD[0m
+[0;90m      $ curl -i -H "x-environment: PROD" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"message":"Hello, World!","status":"ok"}[0m
+[0;90m      Requirement 4: valid value passes through[0m
+[0;32m      PASS[0m
+
+[1;37m[A9] Missing x-environment returns HTTP 400 with a JSON error[0m
+[0;90m      $ curl -i http://kong-gateway:8000/api/hello[0m
+      -> HTTP 400   (expected 400)
+[0;36m      {"error":"Missing x-environment header"}[0m
+[0;90m      Requirement 4: missing header gives 400[0m
+[0;32m      PASS[0m
+
+[1;37m[A10] Invalid x-environment returns HTTP 403 with a JSON error[0m
+[0;90m      $ curl -i -H "x-environment: STAGING" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 403   (expected 403)
+[0;36m      {"error":"Invalid x-environment header. Allowed values: DEV, UAT, PROD"}[0m
+[0;90m      Requirement 4: invalid header gives 403[0m
+[0;32m      PASS[0m
+
+[0;90m  (A11, the rate limiting burst, runs at the end because it uses up the route quota)[0m
+
+[0;36m==============================================================================
+  PART B - Edge Cases (beyond the assignment)
+==============================================================================[0m
+
+[1;37m[B1] Lowercase value is accepted (case-insensitive match)[0m
+[0;90m      $ curl -i -H "x-environment: dev" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"message":"Hello, World!","status":"ok"}[0m
+[0;90m      Plugin uppercases before comparing[0m
+[0;32m      PASS[0m
+
+[1;37m[B2] Mixed case value is accepted[0m
+[0;90m      $ curl -i -H "x-environment: Uat" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"message":"Hello, World!","status":"ok"}[0m
+[0;32m      PASS[0m
+
+[1;37m[B3] Value padded with spaces is accepted[0m
+[0;90m      $ curl -i -H "x-environment:   PROD  " http://kong-gateway:8000/api/hello[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"message":"Hello, World!","status":"ok"}[0m
+[0;90m      Plugin trims the header value[0m
+[0;32m      PASS[0m
+
+[1;37m[B4] Header present but empty is treated as missing (400)[0m
+[0;90m      $ curl -i -H x-environment; http://kong-gateway:8000/api/hello[0m
+      -> HTTP 400   (expected 400)
+[0;36m      {"error":"Missing x-environment header"}[0m
+[0;90m      An empty value carries no more meaning than an absent one[0m
+[0;32m      PASS[0m
+
+[1;37m[B5] Duplicate x-environment headers are rejected (400)[0m
+[0;90m      $ curl -i -H "x-environment: DEV" -H "x-environment: PROD" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 400   (expected 400)
+[0;36m      {"error":"Duplicate x-environment header"}[0m
+[0;90m      Ambiguous intent, so it is rejected rather than silently using the first value[0m
+[0;32m      PASS[0m
+
+[1;37m[B6] Numeric value is rejected (403)[0m
+[0;90m      $ curl -i -H "x-environment: 12345" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 403   (expected 403)
+[0;36m      {"error":"Invalid x-environment header. Allowed values: DEV, UAT, PROD"}[0m
+[0;32m      PASS[0m
+
+[1;37m[B7] Near miss DEVELOPMENT is rejected (403)[0m
+[0;90m      $ curl -i -H "x-environment: DEVELOPMENT" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 403   (expected 403)
+[0;36m      {"error":"Invalid x-environment header. Allowed values: DEV, UAT, PROD"}[0m
+[0;90m      Match is exact, not a prefix match[0m
+[0;32m      PASS[0m
+
+[1;37m[B8] A route without the plugin ignores a bad x-environment value[0m
+[0;90m      $ curl -i -H "x-environment: NONSENSE" http://kong-gateway:8000/api/ping[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"message":"hello from app","status":"ok"}[0m
+[0;90m      Confirms the plugin is scoped per route, not global[0m
+[0;32m      PASS[0m
+
+[1;37m[B9] Plugin errors are JSON, never an HTML error page[0m
+[0;90m      $ curl -i -H "x-environment: STAGING" http://kong-gateway:8000/api/hello[0m
+      -> HTTP 403   (expected 403)
+[0;36m      {"error":"Invalid x-environment header. Allowed values: DEV, UAT, PROD"}[0m
+[0;90m      Uses kong.response.exit() from the Kong PDK[0m
+[0;32m      PASS[0m
+
+[1;37m[B10] API key supplied as a query string is accepted[0m
+[0;90m      $ curl -i http://kong-gateway:8000/api/data?apikey=demo-api-key-12345[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"status":"ok","data":[{"id":1,"name":"Item A"},{"id":2,"name":"Item B"},{"id":3,"name":"Item C"}]}[0m
+[0;90m      key-auth accepts the key in the query string by default[0m
+[0;32m      PASS[0m
+
+[1;37m[B11] Empty API key is rejected (401)[0m
+[0;90m      $ curl -i -H apikey; http://kong-gateway:8000/api/data[0m
+      -> HTTP 401   (expected 401)
+[0;36m      {[0m
+[0;36m        "message":"No API key found in request"[0m
+[0;36m      }[0m
+[0;32m      PASS[0m
+
+[1;37m[B12] Second registered consumer key also works[0m
+[0;90m      $ curl -i -H "apikey: test-api-key-67890" http://kong-gateway:8000/api/data[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"status":"ok","data":[{"id":1,"name":"Item A"},{"id":2,"name":"Item B"},{"id":3,"name":"Item C"}]}[0m
+[0;90m      Consumer test-user[0m
+[0;32m      PASS[0m
+
+[1;37m[B13] Key-auth route is unaffected by x-environment[0m
+[0;90m      $ curl -i -H "apikey: demo-api-key-12345" -H "x-environment: NONSENSE" http://kong-gateway:8000/api/data[0m
+      -> HTTP 200   (expected 200)
+[0;36m      {"status":"ok","data":[{"id":1,"name":"Item A"},{"id":2,"name":"Item B"},{"id":3,"name":"Item C"}]}[0m
+[0;90m      Plugins are independent per route[0m
+[0;32m      PASS[0m
+
+[1;37m[B14] Unrouted path returns 404 from Kong[0m
+[0;90m      $ curl -i http://kong-gateway:8000/nothing-here[0m
+      -> HTTP 404   (expected 404)
+[0;36m      {[0m
+[0;36m        "message":"no Route matched with those values"[0m
+[0;36m      }[0m
+[0;32m      PASS[0m
+
+[1;37m[B15] Wrong HTTP method on a GET-only route returns 404[0m
+[0;90m      $ curl -i -X POST http://kong-gateway:8000/api/hello[0m
+      -> HTTP 404   (expected 404)
+[0;36m      {[0m
+[0;36m        "message":"no Route matched with those values"[0m
+[0;36m      }[0m
+[0;90m      Routes are constrained by method in kong.yml[0m
+[0;32m      PASS[0m
+
+[1;37m[B16] Backend returns a JSON 404 for an unknown path[0m
+[0;90m      $ curl -i http://kong-backend:5000/does-not-exist[0m
+      -> HTTP 404   (expected 404)
+[0;36m      {"error":"Not Found","status":"error"}[0m
+[0;32m      PASS[0m
+
+[1;37m[B17] Malformed JSON body returns a JSON 400[0m
+[0;90m      $ curl -i -X POST -H "Content-Type: application/json" --data "{\"broken\":" http://kong-backend:5000/api/ping[0m
+      -> HTTP 400   (expected 400)
+[0;36m      {"error":"Malformed JSON body","status":"error"}[0m
+[0;90m      Express default HTML error page is never exposed[0m
+[0;32m      PASS[0m
+
+[1;37m[B18] Oversized request body returns a JSON 413[0m
+[0;90m      $ curl -i -X POST -H "Content-Type: application/json" --data @/tmp/tmp.KHgGOI http://kong-backend:5000/api/ping[0m
+      -> HTTP 413   (expected 413)
+[0;36m      {"error":"Payload too large","status":"error"}[0m
+[0;90m      Body limit is 10 kB, which also bounds per-request memory[0m
+[0;32m      PASS[0m
+
+[1;37m[B19] Rate limit headers are returned to the client[0m
+[0;90m      $ curl -i -H "x-environment: DEV" http://kong-gateway:8000/api/hello    # inspect RateLimit-* headers[0m
+      -> HTTP 200   (expected RateLimit-* present)
+[0;36m      X-RateLimit-Remaining-Minute: 36[0m
+[0;36m      X-RateLimit-Limit-Minute: 50[0m
+[0;36m      RateLimit-Remaining: 36[0m
+[0;36m      RateLimit-Limit: 50[0m
+[0;90m      Lets clients back off before they are throttled[0m
+[0;32m      PASS[0m
+
+[1;37m[B20] Kong returns 502 when the backend is down[0m
+[0;90m      $ docker stop kong-backend; curl -i http://kong-gateway:8000/api/ping[0m
+      -> HTTP 502   (expected 502 or 503)
+[0;36m      {[0m
+[0;36m        "message":"An invalid response was received from the upstream server"[0m
+[0;36m      }[0m
+[0;90m      Upstream failure is contained and no stack trace is leaked[0m
+[0;32m      PASS[0m
+
+[1;37m[B21] Kong stays healthy while the backend is down[0m
+[0;90m      $ curl -i http://kong-gateway:8001/status[0m
+      -> HTTP 200   (expected 200)
+[0;90m      The gateway does not fail together with its upstream[0m
+[0;32m      PASS[0m
+
+[1;37m[B22] Traffic recovers after the backend restarts[0m
+[0;90m      $ docker start kong-backend; curl -i http://kong-gateway:8000/api/ping[0m
+      -> HTTP 200   (expected 200)
+[0;90m      No manual gateway intervention is needed[0m
+[0;32m      PASS[0m
+
+[0;36m==============================================================================
+  PART A (continued) - rate limiting
+==============================================================================[0m
+
+[1;37m[A11] Rate limiting throttles a burst with HTTP 429[0m
+[0;90m      $ for i in $(seq 1 40); do curl -H "apikey: demo-api-key-12345" http://kong-gateway:8000/api/data; done[0m
+      -> HTTP 10 x 429   (expected some 429)
+[0;36m      30 responses were 200, 10 were 429 (route limit is 30 per minute)[0m
+[0;90m      Requirement 3: rate-limiting plugin on /api/data[0m
+[0;32m      PASS[0m
+
+[1;37m==============================================================================
+  SUMMARY
+==============================================================================[0m
+  Part A  Assignment Scenarios                   11/11 passed
+  Part B  Edge Cases (beyond the assignment)     22/22 passed
+
+  Passed 33   Failed 0   Skipped 0
+
+[0;36m  HTML report[0m
+    file  /reports/index.html
+[0;36m    link  file:///reports/index.html[0m
+[0;90m    (ctrl+click the link above, or re-run with OPEN=1 to launch it automatically)[0m
+
