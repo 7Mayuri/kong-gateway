@@ -54,13 +54,13 @@ kong-poc/
 │   └── casc.yaml            # Auto-creates the kong-poc-pipeline job on boot
 ├── tests/
 │   ├── Dockerfile           # Small runner image (bash, curl, docker CLI)
-│   └── trigger-pipeline.sh  # Waits for Jenkins and runs the pipeline on startup
+│   ├── trigger-pipeline.sh  # Waits for Jenkins and runs the pipeline on startup
+│   ├── test.sh              # Full scenario + edge case suite (Linux/macOS)
+│   └── test.ps1             # Same suite for Windows PowerShell
 ├── reports/                 # Pipeline writes index.html here, served on :8090
 ├── Dockerfile               # Kong image (bundles the custom plugin)
 ├── docker-compose.yml       # backend + kong + jenkins + pipeline + report
 ├── run.ps1 / run.sh         # One command: start stack, run pipeline, open report
-├── test.sh                  # Full scenario + edge case suite (Linux/macOS)
-├── test.ps1                 # Same suite for Windows PowerShell
 ├── .env                     # Port overrides
 ├── Jenkinsfile              # CI pipeline
 └── README.md
@@ -142,7 +142,7 @@ docker-compose up -d          # start in the background
 docker-compose ps             # confirm containers are healthy
 curl http://localhost:5000/health
 curl http://localhost:8001/status
-.\test.ps1                    # or ./test.sh, run the suite yourself
+.\tests\test.ps1                    # or ./tests/test.sh, run the suite yourself
 ```
 
 ### Ports
@@ -216,11 +216,11 @@ the real response body for each. Start the stack in one terminal, run the script
 docker-compose up
 
 # Terminal 2 - Linux / macOS / Git Bash
-chmod +x test.sh
-./test.sh
+chmod +x tests/test.sh
+./tests/test.sh
 
 # Terminal 2 - Windows PowerShell
-.\test.ps1
+.\tests\test.ps1
 ```
 
 Results are split into two groups so it is obvious what the brief asked for and what was
@@ -273,11 +273,11 @@ When you run the script yourself on the host it writes `test-report.html` next t
 and prints a `file://` link instead. Either way you can have it opened automatically:
 
 ```bash
-OPEN=1 ./test.sh
+OPEN=1 ./tests/test.sh
 ```
 
 ```powershell
-.\test.ps1 -Open
+.\tests\test.ps1 -Open
 ```
 
 The Jenkins pipeline runs the same script and archives the report as a build artifact.
@@ -285,19 +285,19 @@ The Jenkins pipeline runs the same script and archives the report as a build art
 ### Flags
 
 ```bash
-SKIP_RESILIENCE=1 ./test.sh                  # don't stop/start the backend container
-SKIP_RATELIMIT=1 ./test.sh                   # don't burn the rate limit quota
-NO_REPORT=1 ./test.sh                        # console only, no HTML
-OPEN=1 ./test.sh                             # open the report when finished
-KONG_URL=http://kong:8000 ./test.sh          # run from inside another container
-REPORT_PATH=/tmp/report.html ./test.sh       # write the report elsewhere
+SKIP_RESILIENCE=1 ./tests/test.sh                  # don't stop/start the backend container
+SKIP_RATELIMIT=1 ./tests/test.sh                   # don't burn the rate limit quota
+NO_REPORT=1 ./tests/test.sh                        # console only, no HTML
+OPEN=1 ./tests/test.sh                             # open the report when finished
+KONG_URL=http://kong:8000 ./tests/test.sh          # run from inside another container
+REPORT_PATH=/tmp/report.html ./tests/test.sh       # write the report elsewhere
 ```
 
 ```powershell
-.\test.ps1 -SkipResilience -SkipRateLimit
-.\test.ps1 -NoReport
-.\test.ps1 -Open
-.\test.ps1 -KongUrl http://localhost:8000 -ReportPath C:\temp\report.html
+.\tests\test.ps1 -SkipResilience -SkipRateLimit
+.\tests\test.ps1 -NoReport
+.\tests\test.ps1 -Open
+.\tests\test.ps1 -KongUrl http://localhost:8000 -ReportPath C:\temp\report.html
 ```
 
 Both scripts exit non-zero if any scenario fails, so they double as a CI gate.

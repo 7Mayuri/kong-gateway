@@ -101,7 +101,7 @@ pipeline {
                         ADMIN_URL=http://kong:8001 \
                         BACKEND_URL=http://backend:5000 \
                         REPORT_PATH=/workspace/reports/index.html \
-                        bash test.sh
+                        bash tests/test.sh
                     '''
                 }
             }
