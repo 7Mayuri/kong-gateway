@@ -25,17 +25,11 @@ installation of these tools is required.
 
 ## Local Setup
 
-1. Build the Docker images:
+Build the Docker images and start the stack:
 
-   ```bash
-   docker compose build
-   ```
-
-2. Start the stack:
-
-   ```bash
-   docker compose up
-   ```
+```bash
+docker compose up --build
+```
 
 The `kong-info` service prints this status when the stack is ready:
 
