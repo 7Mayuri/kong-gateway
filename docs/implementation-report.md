@@ -96,13 +96,3 @@ Passed 33   Failed 0   Skipped 0
 ## Screenshot Evidence
 
 ![Kong verification test results](images/full-console-test-output.png)
-
-## Reproduction
-
-```bash
-docker compose up --build -d
-docker compose --profile ci up --build --abort-on-container-exit pipeline
-```
-
-Open the generated report at `http://localhost:8090/`. For setup, service links, and
-troubleshooting steps, see the [project documentation in README.md](../README.md).
