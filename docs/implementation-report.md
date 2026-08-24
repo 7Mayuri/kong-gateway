@@ -64,12 +64,15 @@ gateway remains available; traffic recovers after the backend restarts.
 
 ## Run and Verify
 
-Start the stack and run the automated checks:
+Start the stack in the background, then run the automated checks:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 docker compose --profile ci up --build --abort-on-container-exit pipeline
 ```
+
+The first command starts the application, Kong, Jenkins, and the report server.
+The second command starts the CI pipeline, triggers Jenkins, and runs `tests/test.sh`.
 
 Useful checks:
 
