@@ -42,8 +42,7 @@ are:
 | `/api/hello` | Environment validation and rate limiting, 50 requests per minute |
 | `/api/data` | Key authentication and rate limiting, 30 requests per minute |
 
-The registered consumers are `demo-user` and `test-user`. Their API keys are included only for
-this proof of concept and should be moved to a secret store before production use.
+The registered consumers are `demo-user` and `test-user`.
 
 ## Custom Plugin and Error Handling
 
