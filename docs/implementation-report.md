@@ -92,10 +92,7 @@ Passed 33   Failed 0   Skipped 0
 
 ## Screenshot Evidence
 
-The complete CLI output is available in [console-run-output.txt](console-run-output.txt), and the
-HTML report is served at `http://localhost:8090/`.
-
-![Complete CLI output showing every Kong test command, response, and final passing summary](images/full-console-test-output.png)
+![Kong verification test results](images/full-console-test-output.png)
 
 ## Reproduction
 
