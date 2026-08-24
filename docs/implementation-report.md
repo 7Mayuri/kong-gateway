@@ -92,7 +92,9 @@ Passed 33   Failed 0   Skipped 0
 
 ## Screenshot Evidence
 
-![Kong verification test results](images/full-console-test-output.png)
+[Open the full-size verification screenshot](images/full-console-test-output.png)
+
+<img src="images/full-console-test-output.png" alt="Kong verification test results" width="1875">
 
 ## Reproduction
 
