@@ -10,11 +10,9 @@ Jenkins provides a structured pipeline for build and test, and Docker hosts the 
 
 Documentation: [Implementation report](docs/implementation-report.md)
 
-Kong runs in DB-less mode, which means it does not use a separate database to store its
-configuration. At startup, Kong loads `kong/kong.yml`. This file defines the backend service,
-routes, consumers, and plugins, so the application is registered behind the gateway from one
-version-controlled configuration file. The Kong Admin API is available for status and inspection,
-but it is not used to create these objects at runtime.
+Kong runs in DB-less mode, so it does not use a separate database to store its configuration. At
+startup, Kong loads `kong/kong.yml`, which defines the backend service, routes, consumers, and
+plugins in one version-controlled configuration file.
 
 ## Prerequisites
 
